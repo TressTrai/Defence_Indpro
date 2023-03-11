@@ -307,11 +307,11 @@ def scene_sel_ctrl_type():
     btn_ad.update(screen)
     btn_arrow.update(screen)
 
-    if btn_mouse.rect.collidepoint(pygame.mouse.get_pos()) and event.type == pygame.MOUSEBUTTONDOWN:
+    if btn_mouse.rect.collidepoint(pygame.mouse.get_pos()) and event.type == pygame.MOUSEBUTTONUP:
         return 0
-    elif btn_ad.rect.collidepoint(pygame.mouse.get_pos()) and event.type == pygame.MOUSEBUTTONDOWN:
+    elif btn_ad.rect.collidepoint(pygame.mouse.get_pos()) and event.type == pygame.MOUSEBUTTONUP:
         return 1
-    elif btn_arrow.rect.collidepoint(pygame.mouse.get_pos()) and event.type == pygame.MOUSEBUTTONDOWN:
+    elif btn_arrow.rect.collidepoint(pygame.mouse.get_pos()) and event.type == pygame.MOUSEBUTTONUP:
         return 2
     else:
         return -1
