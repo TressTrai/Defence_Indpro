@@ -17,6 +17,7 @@ PLAYER_X, PLAYER_Y = (WIDTH - PLAYER_SIZE[0]) // 2, HEIGHT - PLAYER_SIZE[1]
 LIVES = 1000
 SCORE = 0
 TYPE_CONTROL = -1
+PLAYER_LIST = []
 
 # Параметры базового врага (0)
 BASIC_ENEMY_SIZE = (50, 50)
@@ -328,7 +329,8 @@ def scene_pause():
     if boss_bullets_in_game:
         for entity in boss_bullets_in_game:
             entity.draw(screen)
-    player.draw(screen)
+    for entity in PLAYER_LIST:
+        entity.draw(screen)
     if enemy_in_game:
         for entity in enemy_in_game:
             entity.draw(screen)
@@ -387,6 +389,8 @@ pause = False
 
 stage = 0
 
+temp_count = 0
+
 # Основной цикл игры
 running = True
 while running:
@@ -406,11 +410,19 @@ while running:
 
             if TYPE_CONTROL != -1:
                 player = Player('img/spaceship.png', TYPE_CONTROL)
-                stage = 1
-                current_lives = LIVES
-                current_bullet = AMOUNT_BULLET
+                PLAYER_LIST.append(player)
+                temp_count += 1
 
-                pygame.mixer.music.play(-1)
+                if temp_count == 2:
+                    stage = 1
+                    current_lives = LIVES
+                    current_bullet = AMOUNT_BULLET
+
+                    pygame.mixer.music.play(-1)
+
+                    print(PLAYER_LIST)
+                else:
+                    TYPE_CONTROL = -1
 
     # Игровое поле
     if stage != 0 and current_lives > 0:
@@ -442,7 +454,8 @@ while running:
                                                                       ENEMY_APPEAR_SPEED[1]-30*SCORE))
 
             # Стрельба
-            player.shoot()
+            for entity in PLAYER_LIST:
+                entity.shoot()
 
             if BOSS_IN_GAME:
                 boss.shoot()
@@ -467,8 +480,6 @@ while running:
                 elif btn_exit.rect.collidepoint(pygame.mouse.get_pos()) and event.type == pygame.MOUSEBUTTONDOWN:
                     running = False
         else:
-            # Отрисовку пишем ниже, не тупим
-
             # Отрисовка и столкновения баффов (в класс?)
             if buffs_in_game:
                 for entity in list(buffs_in_game):
@@ -477,7 +488,7 @@ while running:
                     if entity.y > HEIGHT:
                         buffs_in_game.remove(entity)
 
-                    elif player.rect.colliderect(entity.rect):
+                    elif PLAYER_LIST[0].rect.colliderect(entity.rect) or PLAYER_LIST[1].rect.colliderect(entity.rect):
 
                         buffs_in_game.remove(entity)
 
@@ -503,13 +514,16 @@ while running:
                     if entity.y > HEIGHT - entity.size[1]:
                         boss_bullets_in_game.remove(entity)
 
-                    if entity.rect.colliderect(player.rect):
+                    if entity.rect.colliderect(PLAYER_LIST[0].rect) or entity.rect.colliderect(PLAYER_LIST[1].rect):
                         current_lives -= 1
                         boss_bullets_in_game.remove(entity)
 
             # Отрисовка игрока
-            player.move()
-            player.draw(screen)
+            PLAYER_LIST[0].move()
+            PLAYER_LIST[0].draw(screen)
+
+            PLAYER_LIST[1].move()
+            PLAYER_LIST[1].draw(screen)
 
             # Отрисовка и столкновения врагов
             if enemy_in_game:
@@ -517,7 +531,7 @@ while running:
                     entity.move()
                     if entity.y > HEIGHT or not (0 - entity.size[0] < entity.x < WIDTH):
                         enemy_in_game.remove(entity)
-                    elif player.rect.colliderect(entity.rect):
+                    elif PLAYER_LIST[0].rect.colliderect(entity.rect) or PLAYER_LIST[1].rect.colliderect(entity.rect):
                         enemy_in_game.remove(entity)
                         current_lives -= 1
                     elif bullets_in_game:
@@ -631,7 +645,9 @@ while running:
                 boss_bullets_in_game.clear()
                 buffs_in_game.clear()
                 pygame.mixer.music.play(-1)
-                player = Player('img/spaceship.png', TYPE_CONTROL)
+                print(PLAYER_LIST)
+                # player = Player('img/spaceship.png', TYPE_CONTROL)
+
             elif btn_exit.rect.collidepoint(pygame.mouse.get_pos()) and event.type == pygame.MOUSEBUTTONDOWN:
                 running = False
 
