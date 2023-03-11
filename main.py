@@ -536,7 +536,7 @@ while running:
 
             # Надписи на экране
             info_life = info_text.render('Жизни: ' + str(current_lives), True, 'White')
-            info_score = info_text.render('Очки: ' + str(SCORE), True, 'WHite')
+            info_score = info_text.render('Очки: ' + str(SCORE), True, 'White')
             if INFINITY_BULLET:
                 info_bullet = info_text.render('Пули: ∞', True, 'White')
                 seconds = (pygame.time.get_ticks()-start_ticks)/1000
