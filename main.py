@@ -18,7 +18,7 @@ LIVES = 3
 SCORE = 0
 TYPE_CONTROL = -1
 player_count = 0
-number_of_player = 2
+number_of_player = 0
 
 # Параметры базового врага (0)
 BASIC_ENEMY_SIZE = (50, 50)
@@ -384,7 +384,7 @@ record = None
 boss_health = BOSS_HEALTH
 pause = False
 
-stage = 0
+stage = 1
 
 
 # Основной цикл игры
@@ -395,8 +395,30 @@ while running:
 
     screen.fill('Black')
 
+    if stage == 1:
+        text_chose_number = info_text.render('Сколько игроков?', True, 'White')
+        text_choose_number_rect = text_chose_number.get_rect(center=(WIDTH // 2, 200))
+        screen.blit(text_chose_number, text_choose_number_rect)
+
+        btn_one = Button('img/button1.png', 'img/button2.png', '1 игрок', 10, 150, (WIDTH//2-20, 500))
+        btn_two = Button('img/button1.png', 'img/button2.png', '2 игрока', WIDTH // 2 + 10, 150, (WIDTH//2-20, 500))
+
+        btn_one.update(screen)
+        btn_two.update(screen)
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+
+            if btn_one.is_click(event):
+                number_of_player = 1
+                stage += 1
+            elif btn_two.is_click(event):
+                number_of_player = 2
+                stage += 1
+
     # Главное меню
-    if stage == 0:
+    if stage == 2 and number_of_player != 0:
 
         scene_sel_ctrl_type()
 
@@ -425,7 +447,7 @@ while running:
                 player_count += 1
 
                 if player_count == number_of_player:
-                    stage = 1
+                    stage += 1
 
                     pygame.mixer.music.play(-1)
 
@@ -437,8 +459,10 @@ while running:
     for pl in PLAYER_LIST:
         if pl.lives > 0:
             GAME = True
+    if stage == 3 and not GAME:
+        stage = 4
     # Игровое поле
-    if stage != 0 and GAME:
+    if stage == 3 and GAME:
 
         # Ивенты
         for event in pygame.event.get():
@@ -503,8 +527,10 @@ while running:
 
                     for pl in PLAYER_LIST:
                         if pl.rect.colliderect(entity.rect):
-
-                            buffs_in_game.remove(entity)
+                            try:
+                                buffs_in_game.remove(entity)
+                            except ValueError:
+                                print('Не удалось удалить бафф из списка')
 
                             if entity.kind == 1:
                                 pl.lives += 1
@@ -544,8 +570,11 @@ while running:
                         enemy_in_game.remove(entity)
                     for pl in PLAYER_LIST:
                         if pl.rect.colliderect(entity.rect):
-                            enemy_in_game.remove(entity)
-                            pl.lives -= 1
+                            try:
+                                enemy_in_game.remove(entity)
+                                pl.lives -= 1
+                            except ValueError:
+                                print('Не удалось удалить врага из списка')
 
                         if pl.bullets_in_game:
                             for bullet in list(pl.bullets_in_game):
@@ -609,7 +638,7 @@ while running:
                 temp += WIDTH - 250
 
     # Экран проигрыша
-    elif stage != 0:
+    elif stage == 4:
 
         pygame.mixer.music.stop()
 
@@ -650,6 +679,7 @@ while running:
                 running = False
 
             if btn_retry.is_click(event):
+                stage = 3
                 record = None
                 INFINITY_BULLET = False
                 BOSS_IN_GAME = False
