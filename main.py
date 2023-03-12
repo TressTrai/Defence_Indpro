@@ -14,10 +14,11 @@ NAME_GAME = 'Shoot in space'
 PLAYER_SIZE = (80, 80)
 PLAYER_SPEED = 8
 PLAYER_X, PLAYER_Y = (WIDTH - PLAYER_SIZE[0]) // 2, HEIGHT - PLAYER_SIZE[1]
-LIVES = 1000
+LIVES = 3
 SCORE = 0
 TYPE_CONTROL = -1
-PLAYER_LIST = []
+player_count = 0
+number_of_player = 2
 
 # Параметры базового врага (0)
 BASIC_ENEMY_SIZE = (50, 50)
@@ -29,14 +30,14 @@ ANGLE_ENEMY_SPEED = (5, 10)
 
 # Параметры всех врагов
 ENEMY_COUNT_DIFFICULTY = 15
-ENEMY_APPEAR_SPEED = (500, 1000)  # чем меньше числа, тем быстрее появляется враг (1500, 3000)
+ENEMY_APPEAR_SPEED = (1500, 3000)  # чем меньше числа, тем быстрее появляется враг (1500, 3000)
 BOSS_IN_GAME = False
 BOSS_HEALTH = 584
 
 # Параметры пуль
 BULLET_SIZE = (10, 10)
 BULLET_SPEED = 6
-AMOUNT_BULLET = 1000
+AMOUNT_BULLET = 3
 INFINITY_BULLET = False
 
 # Параметры баффов ([1] - доб. Жизнь [2] - доб. макс Пуль [3] - бесконечные пули на некоторое время)
@@ -49,9 +50,9 @@ BUFF_CHANCE_3 = 0.99
 
 # Списки объектов
 enemy_in_game = []
-bullets_in_game = []
 boss_bullets_in_game = []
 buffs_in_game = []
+PLAYER_LIST = []
 
 
 # Класс Пули
@@ -141,6 +142,10 @@ class Button(pygame.sprite.Sprite):
             self.image = self.image_passive
 
         self.draw(surf)
+
+    def is_click(self, event):
+        if self.rect.collidepoint(pygame.mouse.get_pos()) and event.type == pygame.MOUSEBUTTONUP:
+            return True
 
     # Отрисовка кнопки
     def draw(self, surf):
@@ -249,6 +254,10 @@ class Player(pygame.sprite.Sprite):
         self.image = pygame.transform.scale(self.image, self.size)
         self.rect = pygame.Rect((self.x, self.y), self.size)
         self.kind = type_control
+        self.lives = LIVES
+        self.bullet = AMOUNT_BULLET
+        self.score = 0
+        self.bullets_in_game = []
 
     # Движение Игрока
     def move(self):
@@ -275,7 +284,7 @@ class Player(pygame.sprite.Sprite):
     # Пиу-пяу
     def shoot(self):
 
-        if len(bullets_in_game) < current_bullet or INFINITY_BULLET:
+        if len(self.bullets_in_game) < self.bullet or INFINITY_BULLET:
             flag = False
 
             if self.kind == 0 and event.type == pygame.MOUSEBUTTONDOWN:
@@ -288,7 +297,7 @@ class Player(pygame.sprite.Sprite):
             if flag:
                 bul = Bullet('img/bullet.png', self.x + self.size[0] // 2 - BULLET_SIZE[0] // 2,
                              self.y + self.size[1] // 2 - BULLET_SIZE[1] // 2, BULLET_SIZE, BULLET_SPEED)
-                bullets_in_game.append(bul)
+                self.bullets_in_game.append(bul)
                 sound_shoot.play()
 
 
@@ -299,23 +308,6 @@ def scene_sel_ctrl_type():
 
     screen.blit(text_choose_type_movement, text_choose_type_movement_rect)
 
-    btn_mouse = Button('img/button1.png', 'img/button2.png', 'Мышка', 10, HEIGHT // 2, (250, 200))
-    btn_ad = Button('img/button2.png', 'img/button1.png', 'Клавиши AD', WIDTH // 2 - 125, HEIGHT // 2, (250, 200))
-    btn_arrow = Button('img/button1.png', 'img/button2.png', 'Стрелки', WIDTH - 260, HEIGHT // 2, (250, 200))
-
-    btn_mouse.update(screen)
-    btn_ad.update(screen)
-    btn_arrow.update(screen)
-
-    if btn_mouse.rect.collidepoint(pygame.mouse.get_pos()) and event.type == pygame.MOUSEBUTTONUP:
-        return 0
-    elif btn_ad.rect.collidepoint(pygame.mouse.get_pos()) and event.type == pygame.MOUSEBUTTONUP:
-        return 1
-    elif btn_arrow.rect.collidepoint(pygame.mouse.get_pos()) and event.type == pygame.MOUSEBUTTONUP:
-        return 2
-    else:
-        return -1
-
 
 def scene_pause():
 
@@ -323,14 +315,16 @@ def scene_pause():
     if buffs_in_game:
         for entity in buffs_in_game:
             entity.draw(screen)
-    if bullets_in_game:
-        for entity in bullets_in_game:
-            entity.draw(screen)
     if boss_bullets_in_game:
         for entity in boss_bullets_in_game:
             entity.draw(screen)
-    for entity in PLAYER_LIST:
-        entity.draw(screen)
+
+    for pl in PLAYER_LIST:
+        if pl.bullets_in_game:
+            for entity in pl.bullets_in_game:
+                entity.draw(screen)
+        pl.draw(screen)
+
     if enemy_in_game:
         for entity in enemy_in_game:
             entity.draw(screen)
@@ -380,8 +374,11 @@ pygame.mixer.music.set_volume(0.2)
 # Настройка текста
 info_text = pygame.font.Font('fonts/DelaGothicOne-Regular.ttf', 24)
 
-current_lives = 0
-current_bullet = 0
+current_lives_1 = 0
+current_bullet_1 = 0
+current_lives_2 = 0
+current_bullet_2 = 0
+
 kind_buff = 0
 record = None
 boss_health = BOSS_HEALTH
@@ -389,7 +386,6 @@ pause = False
 
 stage = 0
 
-temp_count = 0
 
 # Основной цикл игры
 running = True
@@ -402,21 +398,34 @@ while running:
     # Главное меню
     if stage == 0:
 
-        TYPE_CONTROL = scene_sel_ctrl_type()
+        scene_sel_ctrl_type()
+
+        btn_mouse = Button('img/button1.png', 'img/button2.png', 'Мышка', 10, HEIGHT // 2, (250, 200))
+        btn_ad = Button('img/button2.png', 'img/button1.png', 'Клавиши AD', WIDTH // 2 - 125, HEIGHT // 2, (250, 200))
+        btn_arrow = Button('img/button1.png', 'img/button2.png', 'Стрелки', WIDTH - 260, HEIGHT // 2, (250, 200))
+
+        btn_mouse.update(screen)
+        btn_ad.update(screen)
+        btn_arrow.update(screen)
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
 
+            if btn_mouse.is_click(event):
+                TYPE_CONTROL = 0
+            elif btn_ad.is_click(event):
+                TYPE_CONTROL = 1
+            elif btn_arrow.is_click(event):
+                TYPE_CONTROL = 2
+
             if TYPE_CONTROL != -1:
                 player = Player('img/spaceship.png', TYPE_CONTROL)
                 PLAYER_LIST.append(player)
-                temp_count += 1
+                player_count += 1
 
-                if temp_count == 2:
+                if player_count == number_of_player:
                     stage = 1
-                    current_lives = LIVES
-                    current_bullet = AMOUNT_BULLET
 
                     pygame.mixer.music.play(-1)
 
@@ -424,8 +433,12 @@ while running:
                 else:
                     TYPE_CONTROL = -1
 
+    GAME = False
+    for pl in PLAYER_LIST:
+        if pl.lives > 0:
+            GAME = True
     # Игровое поле
-    if stage != 0 and current_lives > 0:
+    if stage != 0 and GAME:
 
         # Ивенты
         for event in pygame.event.get():
@@ -446,13 +459,14 @@ while running:
                 enemy = Enemy(kind_enemy)
                 enemy_in_game.append(enemy)
 
-                if ENEMY_APPEAR_SPEED[0] - 20 * SCORE <= 0:
+                if ENEMY_APPEAR_SPEED[0] - 20 * max(PLAYER_LIST[0].score, PLAYER_LIST[0].score) <= 0:
                     BOSS_IN_GAME = True
                     boss = BossEvent('img/button1.png')
                 else:
-                    pygame.time.set_timer(enemy_timer, random.randint(ENEMY_APPEAR_SPEED[0]-20*SCORE,
-                                                                      ENEMY_APPEAR_SPEED[1]-30*SCORE))
-
+                    pygame.time.set_timer(enemy_timer, random.randint(ENEMY_APPEAR_SPEED[0]-20*max(PLAYER_LIST[0].score,
+                                                                                                   PLAYER_LIST[0].score),
+                                                                      ENEMY_APPEAR_SPEED[1]-30*max(PLAYER_LIST[0].score,
+                                                                                                   PLAYER_LIST[0].score)))
             # Стрельба
             for entity in PLAYER_LIST:
                 entity.shoot()
@@ -473,11 +487,10 @@ while running:
                 if event.type == pygame.QUIT:
                     running = False
 
-                if (btn_continue.rect.collidepoint(pygame.mouse.get_pos()) and event.type == pygame.MOUSEBUTTONDOWN) \
-                        or (event.type == pygame.KEYUP and event.key == pygame.K_ESCAPE):
+                if btn_continue.is_click(event) or (event.type == pygame.KEYUP and event.key == pygame.K_ESCAPE):
                     pygame.mixer.music.unpause()
                     pause = False
-                elif btn_exit.rect.collidepoint(pygame.mouse.get_pos()) and event.type == pygame.MOUSEBUTTONDOWN:
+                elif btn_exit.is_click(event):
                     running = False
         else:
             # Отрисовка и столкновения баффов (в класс?)
@@ -488,24 +501,18 @@ while running:
                     if entity.y > HEIGHT:
                         buffs_in_game.remove(entity)
 
-                    elif PLAYER_LIST[0].rect.colliderect(entity.rect) or PLAYER_LIST[1].rect.colliderect(entity.rect):
+                    for pl in PLAYER_LIST:
+                        if pl.rect.colliderect(entity.rect):
 
-                        buffs_in_game.remove(entity)
+                            buffs_in_game.remove(entity)
 
-                        if entity.kind == 1:
-                            current_lives += 1
-                        elif entity.kind == 2:
-                            current_bullet += 1
-                        elif entity.kind == 3:
-                            start_ticks = pygame.time.get_ticks()
-                            INFINITY_BULLET = True
-
-            # Отрисовка пуль игрока
-            if bullets_in_game:
-                for entity in list(bullets_in_game):
-                    entity.move()
-                    if entity.y < 0:
-                        bullets_in_game.remove(entity)
+                            if entity.kind == 1:
+                                pl.lives += 1
+                            elif entity.kind == 2:
+                                pl.bullet += 1
+                            elif entity.kind == 3:
+                                start_ticks = pygame.time.get_ticks()
+                                INFINITY_BULLET = True
 
             # Отрисовка пуль босса
             if boss_bullets_in_game:
@@ -514,16 +521,20 @@ while running:
                     if entity.y > HEIGHT - entity.size[1]:
                         boss_bullets_in_game.remove(entity)
 
-                    if entity.rect.colliderect(PLAYER_LIST[0].rect) or entity.rect.colliderect(PLAYER_LIST[1].rect):
-                        current_lives -= 1
-                        boss_bullets_in_game.remove(entity)
+                    for pl in PLAYER_LIST:
+                        if entity.rect.colliderect(pl.rect):
+                            pl.lives -= 1
+                            boss_bullets_in_game.remove(entity)
 
             # Отрисовка игрока
-            PLAYER_LIST[0].move()
-            PLAYER_LIST[0].draw(screen)
-
-            PLAYER_LIST[1].move()
-            PLAYER_LIST[1].draw(screen)
+            for pl in PLAYER_LIST:
+                if pl.bullets_in_game:
+                    for entity in list(pl.bullets_in_game):
+                        entity.move()
+                        if entity.y < 0:
+                            pl.bullets_in_game.remove(entity)
+                pl.move()
+                pl.draw(screen)
 
             # Отрисовка и столкновения врагов
             if enemy_in_game:
@@ -531,65 +542,71 @@ while running:
                     entity.move()
                     if entity.y > HEIGHT or not (0 - entity.size[0] < entity.x < WIDTH):
                         enemy_in_game.remove(entity)
-                    elif PLAYER_LIST[0].rect.colliderect(entity.rect) or PLAYER_LIST[1].rect.colliderect(entity.rect):
-                        enemy_in_game.remove(entity)
-                        current_lives -= 1
-                    elif bullets_in_game:
-                        for bullet in list(bullets_in_game):
-                            if bullet.rect.colliderect(entity.rect):
-                                if entity in enemy_in_game:
-                                    enemy_in_game.remove(entity)
-                                bullets_in_game.remove(bullet)
-                                SCORE += 1
-                                sound_death_enemy.play()
+                    for pl in PLAYER_LIST:
+                        if pl.rect.colliderect(entity.rect):
+                            enemy_in_game.remove(entity)
+                            pl.lives -= 1
 
-                                # Спавн Баффов
-                                if not INFINITY_BULLET:
-                                    chance_buff = random.random()
-                                    if len(buffs_in_game) < BUFF_AMOUNT:
-                                        if chance_buff > BUFF_CHANCE_3:
-                                            kind_buff = 3
-                                        elif chance_buff > BUFF_CHANCE_1:
-                                            kind_buff = 1
-                                        elif chance_buff > BUFF_CHANCE_2:
-                                            kind_buff = 2
+                        if pl.bullets_in_game:
+                            for bullet in list(pl.bullets_in_game):
+                                if bullet.rect.colliderect(entity.rect):
+                                    if entity in enemy_in_game:
+                                        enemy_in_game.remove(entity)
+                                    pl.bullets_in_game.remove(bullet)
+                                    pl.score += 1
+                                    sound_death_enemy.play()
 
-                                        if kind_buff != 0:
-                                            buff = FallingBuff(kind_buff)
-                                            buffs_in_game.append(buff)
-                                            kind_buff = 0
+                                    # Спавн Баффов
+                                    if not INFINITY_BULLET:
+                                        chance_buff = random.random()
+                                        if len(buffs_in_game) < BUFF_AMOUNT:
+                                            if chance_buff > BUFF_CHANCE_3:
+                                                kind_buff = 3
+                                            elif chance_buff > BUFF_CHANCE_1:
+                                                kind_buff = 1
+                                            elif chance_buff > BUFF_CHANCE_2:
+                                                kind_buff = 2
+
+                                            if kind_buff != 0:
+                                                buff = FallingBuff(kind_buff)
+                                                buffs_in_game.append(buff)
+                                                kind_buff = 0
 
             if BOSS_IN_GAME:
                 boss.draw(screen, boss_health)
-                if bullets_in_game:
-                    for entity in list(bullets_in_game):
-                        if entity.rect.colliderect(boss.rect):
-                            bullets_in_game.remove(entity)
-                            boss_health -= 5
+                for pl in PLAYER_LIST:
+                    if pl.bullets_in_game:
+                        for entity in list(pl.bullets_in_game):
+                            if entity.rect.colliderect(boss.rect):
+                                pl.bullets_in_game.remove(entity)
+                                boss_health -= 5
 
                 if boss_health <= 0:
-                    current_lives = 0
+                    for pl in PLAYER_LIST:
+                        pl.lives = 0
 
             # Надписи на экране
-            info_life = info_text.render('Жизни: ' + str(current_lives), True, 'White')
-            info_score = info_text.render('Очки: ' + str(SCORE), True, 'White')
-            if INFINITY_BULLET:
-                info_bullet = info_text.render('Пули: ∞', True, 'White')
-                seconds = (pygame.time.get_ticks()-start_ticks)/1000
-                info_timer_infinity = info_text.render('00:0' + str(round(10-seconds)-1), True, 'Red')
-                screen.blit(info_timer_infinity, (WIDTH // 2 - 24*2, 0))
-                if seconds >= 9:
-                    INFINITY_BULLET = False
-
-            else:
-                if current_bullet - len(bullets_in_game) <= 0:
-                    info_bullet = info_text.render('Пули: 0', True, 'White')
+            temp = 0
+            for pl in PLAYER_LIST:
+                info_life = info_text.render('Жизни: ' + str(pl.lives), True, 'White')
+                info_score = info_text.render('Очки: ' + str(pl.score), True, 'White')
+                if INFINITY_BULLET:
+                    info_bullet = info_text.render('Пули: ∞', True, 'White')
+                    seconds = (pygame.time.get_ticks()-start_ticks)/1000
+                    info_timer_infinity = info_text.render('00:0' + str(round(10-seconds)-1), True, 'Red')
+                    screen.blit(info_timer_infinity, (WIDTH // 2 - 24*2, 0))
+                    if seconds >= 9:
+                        INFINITY_BULLET = False
                 else:
-                    info_bullet = info_text.render('Пули: ' + str(current_bullet - len(bullets_in_game)), True, 'White')
+                    if pl.bullet - len(pl.bullets_in_game) <= 0:
+                        info_bullet = info_text.render('Пули: 0', True, 'White')
+                    else:
+                        info_bullet = info_text.render('Пули: ' + str(pl.bullet - len(pl.bullets_in_game)), True, 'White')
 
-            screen.blit(info_life, (0, 0))
-            screen.blit(info_score, (0, 24))
-            screen.blit(info_bullet, (0, 48))
+                screen.blit(info_life, (temp, 0))
+                screen.blit(info_score, (temp, 24))
+                screen.blit(info_bullet, (temp, 48))
+                temp += WIDTH - 250
 
     # Экран проигрыша
     elif stage != 0:
@@ -605,16 +622,16 @@ while running:
             file_record.close()
 
         else:
-            if SCORE >= record:
+            if max(PLAYER_LIST[0].score, PLAYER_LIST[1].score) >= record:
                 file_record = open('high_record.txt', 'w')
-                record = SCORE
+                record = max(PLAYER_LIST[0].score, PLAYER_LIST[1].score)
                 file_record.write(str(record))
                 file_record.close()
 
-        text_score = info_text.render('Очков: ' + str(SCORE), True, 'White')
+        # text_score = info_text.render('Очков: ' + str(SCORE), True, 'White')
         text_record = info_text.render('Рекорд: ' + str(record), True, 'White')
 
-        screen.blit(text_score, (0, 0))
+        # screen.blit(text_score, (0, 0))
         screen.blit(text_record, (0, 24))
 
         text_death = info_text.render('Потрачено', True, 'White')
@@ -632,23 +649,24 @@ while running:
             if event.type == pygame.QUIT:
                 running = False
 
-            if btn_retry.rect.collidepoint(pygame.mouse.get_pos()) and event.type == pygame.MOUSEBUTTONDOWN:
-                current_bullet = AMOUNT_BULLET
-                current_lives = LIVES
-                SCORE = 0
+            if btn_retry.is_click(event):
                 record = None
                 INFINITY_BULLET = False
                 BOSS_IN_GAME = False
                 boss_health = BOSS_HEALTH
                 enemy_in_game.clear()
-                bullets_in_game.clear()
                 boss_bullets_in_game.clear()
                 buffs_in_game.clear()
                 pygame.mixer.music.play(-1)
                 print(PLAYER_LIST)
+                for pl in PLAYER_LIST:
+                    pl.lives = LIVES
+                    pl.bullet = AMOUNT_BULLET
+                    pl.bullets_in_game.clear()
+                    pl.score = 0
                 # player = Player('img/spaceship.png', TYPE_CONTROL)
 
-            elif btn_exit.rect.collidepoint(pygame.mouse.get_pos()) and event.type == pygame.MOUSEBUTTONDOWN:
+            elif btn_exit.is_click(event):
                 running = False
 
     # Вывод в консоль контрольных значений
