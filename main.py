@@ -248,8 +248,17 @@ class Player(pygame.sprite.Sprite):
         pygame.sprite.Sprite.__init__(self)
         self.size = PLAYER_SIZE
         self.speed = PLAYER_SPEED
-        self.x = PLAYER_X
-        self.y = PLAYER_Y
+        if number_of_player == 2:
+            if player_count == 0:
+                self.x = PLAYER_X // 2
+                self.y = PLAYER_Y
+            else:
+                self.x = 3 * PLAYER_X // 2
+                self.y = PLAYER_Y
+        else:
+            self.x = PLAYER_X
+            self.y = PLAYER_Y
+
         self.image = pygame.image.load(file_name).convert_alpha()
         self.image = pygame.transform.scale(self.image, self.size)
         self.rect = pygame.Rect((self.x, self.y), self.size)
@@ -261,30 +270,32 @@ class Player(pygame.sprite.Sprite):
 
     # Движение Игрока
     def move(self):
-        if self.kind == 1:
-            key_pressed = pygame.key.get_pressed()
-            if key_pressed[pygame.K_d] and self.x < WIDTH - self.size[0]:
-                self.x += self.speed
-            if key_pressed[pygame.K_a] and self.x > 0:
-                self.x -= self.speed
-        elif self.kind == 2:
-            key_pressed = pygame.key.get_pressed()
-            if key_pressed[pygame.K_RIGHT] and self.x < WIDTH - self.size[0]:
-                self.x += self.speed
-            if key_pressed[pygame.K_LEFT] and self.x > 0:
-                self.x -= self.speed
-        elif self.kind == 0:
-            self.x = pygame.mouse.get_pos()[0]
-        self.rect = pygame.Rect((self.x, self.y), self.size)
+        if self.lives > 0:
+            if self.kind == 1:
+                key_pressed = pygame.key.get_pressed()
+                if key_pressed[pygame.K_d] and self.x < WIDTH - self.size[0]:
+                    self.x += self.speed
+                if key_pressed[pygame.K_a] and self.x > 0:
+                    self.x -= self.speed
+            elif self.kind == 2:
+                key_pressed = pygame.key.get_pressed()
+                if key_pressed[pygame.K_RIGHT] and self.x < WIDTH - self.size[0]:
+                    self.x += self.speed
+                if key_pressed[pygame.K_LEFT] and self.x > 0:
+                    self.x -= self.speed
+            elif self.kind == 0:
+                self.x = pygame.mouse.get_pos()[0]
+            self.rect = pygame.Rect((self.x, self.y), self.size)
 
     # Отрисовка Игрока
     def draw(self, surf):
-        surf.blit(self.image, (self.x, self.y))
+        if self.lives > 0:
+            surf.blit(self.image, (self.x, self.y))
 
     # Пиу-пяу
     def shoot(self):
 
-        if len(self.bullets_in_game) < self.bullet or INFINITY_BULLET:
+        if (len(self.bullets_in_game) < self.bullet or INFINITY_BULLET) and self.lives > 0:
             flag = False
 
             if self.kind == 0 and event.type == pygame.MOUSEBUTTONDOWN:
