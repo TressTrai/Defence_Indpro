@@ -36,7 +36,7 @@ BOSS_HEALTH = 584
 
 # Параметры пуль
 BULLET_SIZE = (10, 10)
-BULLET_SPEED = 6
+BULLET_SPEED = 8
 AMOUNT_BULLET = 3
 INFINITY_BULLET = False
 
@@ -302,11 +302,15 @@ class Player(pygame.sprite.Sprite):
 
 
 # --------- Сцены ------------
-def scene_sel_ctrl_type():
+def scene_sel_ctrl_type(number):
+    text_player = info_text.render(str(number + 1) + ' игрок', True, 'White')
+    text_player_rect = text_player.get_rect(center=(WIDTH//2, 150))
+
     text_choose_type_movement = info_text.render('Выберите тип управления: ', True, 'White')
     text_choose_type_movement_rect = text_choose_type_movement.get_rect(center=(WIDTH // 2, 200))
 
     screen.blit(text_choose_type_movement, text_choose_type_movement_rect)
+    screen.blit(text_player, text_player_rect)
 
 
 def scene_pause():
@@ -395,6 +399,7 @@ while running:
 
     screen.fill('Black')
 
+    # Выбор количества игроков
     if stage == 1:
         text_chose_number = info_text.render('Сколько игроков?', True, 'White')
         text_choose_number_rect = text_chose_number.get_rect(center=(WIDTH // 2, 200))
@@ -417,32 +422,43 @@ while running:
                 number_of_player = 2
                 stage += 1
 
-    # Главное меню
+    # Выбор управления
     if stage == 2 and number_of_player != 0:
 
-        scene_sel_ctrl_type()
+        scene_sel_ctrl_type(player_count)
 
         btn_mouse = Button('img/button1.png', 'img/button2.png', 'Мышка', 10, HEIGHT // 2, (250, 200))
-        btn_ad = Button('img/button2.png', 'img/button1.png', 'Клавиши AD', WIDTH // 2 - 125, HEIGHT // 2, (250, 200))
+        btn_ad = Button('img/button1.png', 'img/button2.png', 'Клавиши AD', WIDTH // 2 - 125, HEIGHT // 2, (250, 200))
         btn_arrow = Button('img/button1.png', 'img/button2.png', 'Стрелки', WIDTH - 260, HEIGHT // 2, (250, 200))
 
-        btn_mouse.update(screen)
-        btn_ad.update(screen)
-        btn_arrow.update(screen)
+        old_type_control = None
+        if player_count == 1:
+            old_type_control = PLAYER_LIST[0].kind
+
+        if old_type_control != 0:
+            btn_mouse.update(screen)
+        if old_type_control != 1:
+            btn_ad.update(screen)
+        if old_type_control != 2:
+            btn_arrow.update(screen)
+        if not old_type_control:
+            btn_mouse.update(screen)
+            btn_ad.update(screen)
+            btn_arrow.update(screen)
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
 
-            if btn_mouse.is_click(event):
+            if btn_mouse.is_click(event) and old_type_control != 0:
                 TYPE_CONTROL = 0
-            elif btn_ad.is_click(event):
+            if btn_ad.is_click(event) and old_type_control != 1:
                 TYPE_CONTROL = 1
-            elif btn_arrow.is_click(event):
+            if btn_arrow.is_click(event) and old_type_control != 2:
                 TYPE_CONTROL = 2
 
             if TYPE_CONTROL != -1:
-                player = Player('img/spaceship.png', TYPE_CONTROL)
+                player = Player('img/player_'+str(player_count+1)+'.png', TYPE_CONTROL)
                 PLAYER_LIST.append(player)
                 player_count += 1
 
@@ -455,12 +471,14 @@ while running:
                 else:
                     TYPE_CONTROL = -1
 
+    # Закончилась ли игра?
     GAME = False
     for pl in PLAYER_LIST:
         if pl.lives > 0:
             GAME = True
     if stage == 3 and not GAME:
         stage = 4
+
     # Игровое поле
     if stage == 3 and GAME:
 
@@ -483,14 +501,18 @@ while running:
                 enemy = Enemy(kind_enemy)
                 enemy_in_game.append(enemy)
 
-                if ENEMY_APPEAR_SPEED[0] - 20 * max(PLAYER_LIST[0].score, PLAYER_LIST[0].score) <= 0:
+                max_score = 0
+
+                for pl in PLAYER_LIST:
+                    if pl.score >= max_score:
+                        max_score = pl.score
+
+                if ENEMY_APPEAR_SPEED[0] - 20 * max_score <= 0:
                     BOSS_IN_GAME = True
                     boss = BossEvent('img/button1.png')
                 else:
-                    pygame.time.set_timer(enemy_timer, random.randint(ENEMY_APPEAR_SPEED[0]-20*max(PLAYER_LIST[0].score,
-                                                                                                   PLAYER_LIST[0].score),
-                                                                      ENEMY_APPEAR_SPEED[1]-30*max(PLAYER_LIST[0].score,
-                                                                                                   PLAYER_LIST[0].score)))
+                    pygame.time.set_timer(enemy_timer, random.randint(ENEMY_APPEAR_SPEED[0]-20*max_score,
+                                                                      ENEMY_APPEAR_SPEED[1]-30*max_score))
             # Стрельба
             for entity in PLAYER_LIST:
                 entity.shoot()
@@ -615,7 +637,7 @@ while running:
                         pl.lives = 0
 
             # Надписи на экране
-            temp = 0
+            old_type_control = 0
             for pl in PLAYER_LIST:
                 info_life = info_text.render('Жизни: ' + str(pl.lives), True, 'White')
                 info_score = info_text.render('Очки: ' + str(pl.score), True, 'White')
@@ -632,10 +654,10 @@ while running:
                     else:
                         info_bullet = info_text.render('Пули: ' + str(pl.bullet - len(pl.bullets_in_game)), True, 'White')
 
-                screen.blit(info_life, (temp, 0))
-                screen.blit(info_score, (temp, 24))
-                screen.blit(info_bullet, (temp, 48))
-                temp += WIDTH - 250
+                screen.blit(info_life, (old_type_control, 0))
+                screen.blit(info_score, (old_type_control, 24))
+                screen.blit(info_bullet, (old_type_control, 48))
+                old_type_control += WIDTH - 250
 
     # Экран проигрыша
     elif stage == 4:
@@ -651,9 +673,13 @@ while running:
             file_record.close()
 
         else:
-            if max(PLAYER_LIST[0].score, PLAYER_LIST[1].score) >= record:
+            max_score = 0
+            for pl in PLAYER_LIST:
+                if pl.score >= max_score:
+                    max_score = pl.score
+            if max_score >= record:
                 file_record = open('high_record.txt', 'w')
-                record = max(PLAYER_LIST[0].score, PLAYER_LIST[1].score)
+                record = max_score
                 file_record.write(str(record))
                 file_record.close()
 
@@ -694,7 +720,6 @@ while running:
                     pl.bullet = AMOUNT_BULLET
                     pl.bullets_in_game.clear()
                     pl.score = 0
-                # player = Player('img/spaceship.png', TYPE_CONTROL)
 
             elif btn_exit.is_click(event):
                 running = False
