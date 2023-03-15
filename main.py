@@ -7,12 +7,12 @@ pygame.init()
 # Параметры экрана
 WIDTH = 800
 HEIGHT = 600
-FPS = 30
+FPS = 60
 NAME_GAME = 'Shoot in space'
 
 # Параметры игрока
 PLAYER_SIZE = (80, 80)
-PLAYER_SPEED = 8
+PLAYER_SPEED = 6
 PLAYER_X, PLAYER_Y = (WIDTH - PLAYER_SIZE[0]) // 2, HEIGHT - PLAYER_SIZE[1]
 LIVES = 3
 SCORE = 0
@@ -22,11 +22,11 @@ number_of_player = 0
 
 # Параметры базового врага (0)
 BASIC_ENEMY_SIZE = (50, 50)
-BASIC_ENEMY_SPEED = (5, 10)
+BASIC_ENEMY_SPEED = (3, 5)
 
 # Параметры углового врага (1)
 ANGLE_ENEMY_SIZE = (60, 60)
-ANGLE_ENEMY_SPEED = (5, 10)
+ANGLE_ENEMY_SPEED = (4, 5)
 
 # Параметры всех врагов
 ENEMY_COUNT_DIFFICULTY = 15
@@ -36,17 +36,17 @@ BOSS_HEALTH = 584
 
 # Параметры пуль
 BULLET_SIZE = (10, 10)
-BULLET_SPEED = 8
+BULLET_SPEED = 5
 AMOUNT_BULLET = 3
-INFINITY_BULLET = False
+# INFINITY_BULLET = False
 
 # Параметры баффов ([1] - доб. Жизнь [2] - доб. макс Пуль [3] - бесконечные пули на некоторое время)
 BUFF_SIZE = (20, 20)
-BUFF_SPEED = 6
+BUFF_SPEED = 4
 BUFF_AMOUNT = 5
-BUFF_CHANCE_1 = 0.95
-BUFF_CHANCE_2 = 0.93
-BUFF_CHANCE_3 = 0.99
+BUFF_CHANCE_1 = 0.95  # 0.95
+BUFF_CHANCE_2 = 0.93  # 0.93
+BUFF_CHANCE_3 = 0.99  # 0.99
 
 # Списки объектов
 enemy_in_game = []
@@ -277,6 +277,8 @@ class Player(pygame.sprite.Sprite):
         self.bullet = AMOUNT_BULLET
         self.score = 0
         self.bullets_in_game = []
+        self.infinite_bullet = False
+        self.time = 0
 
     # Движение Игрока
     def move(self):
@@ -293,7 +295,7 @@ class Player(pygame.sprite.Sprite):
                     self.x += self.speed
                 if key_pressed[pygame.K_LEFT] and self.x > 0:
                     self.x -= self.speed
-            elif self.kind == 0:
+            elif self.kind == 0 and pygame.mouse.get_pos()[0] < WIDTH - self.size[0]:
                 self.x = pygame.mouse.get_pos()[0]
             self.rect = pygame.Rect((self.x, self.y), self.size)
 
@@ -305,7 +307,7 @@ class Player(pygame.sprite.Sprite):
     # Пиу-пяу
     def shoot(self):
 
-        if (len(self.bullets_in_game) < self.bullet or INFINITY_BULLET) and self.lives > 0:
+        if (len(self.bullets_in_game) < self.bullet or self.infinite_bullet) and self.lives > 0:
             flag = False
 
             if self.kind == 0 and event.type == pygame.MOUSEBUTTONDOWN:
@@ -446,7 +448,7 @@ while running:
                 stage += 1
 
     # Выбор управления
-    if stage == 2 and number_of_player != 0:
+    elif stage == 2 and number_of_player != 0:
 
         btn_mouse = Button('img/button1.png', 'img/button2.png', 'Мышка', 10, HEIGHT // 2, (250, 200))
         btn_ad = Button('img/button1.png', 'img/button2.png', 'Клавиши AD', WIDTH // 2 - 125, HEIGHT // 2, (250, 200))
@@ -506,6 +508,12 @@ while running:
                 pause = True
                 break
 
+            # Пауза когда экран не в фокусе
+            if event.type == pygame.ACTIVEEVENT:
+                if event.state == 2:
+                    pause = True
+                    break
+
             # Спавн врагов (Засунуть в класс?)
             if not BOSS_IN_GAME and event.type == enemy_timer and len(enemy_in_game) < ENEMY_COUNT_DIFFICULTY:
 
@@ -534,10 +542,10 @@ while running:
 
         # Пауза
         if pause:
-            btn_continue = Button('img/button1.png', 'img/button2.png', 'Продолжить', WIDTH // 2 - 70, HEIGHT // 2 + 25,
-                                  (140, 75))
-            btn_exit = Button('img/button2.png', 'img/button1.png', 'Выход', WIDTH // 2 - 70, HEIGHT // 2 + 100,
-                              (140, 75))
+            btn_continue = Button('img/button1.png', 'img/button2.png', 'Продолжить', WIDTH // 2 - 100, HEIGHT // 2 + 25,
+                                  (200, 75))
+            btn_exit = Button('img/button1.png', 'img/button2.png', 'Выход', WIDTH // 2 - 100, HEIGHT // 2 + 100,
+                              (200, 75))
 
             scene_pause()
 
@@ -570,8 +578,8 @@ while running:
                                 elif entity.kind == 2:
                                     pl.bullet += 1
                                 elif entity.kind == 3:
-                                    start_ticks = pygame.time.get_ticks()
-                                    INFINITY_BULLET = True
+                                    pl.time = pygame.time.get_ticks()
+                                    pl.infinite_bullet = True
                             except ValueError:
                                 print('Не удалось удалить бафф из списка')
                                 buff_player = random.randint(1, 2)
@@ -584,7 +592,10 @@ while running:
                                         PLAYER_LIST[0].bullet -= 1
                                     elif entity.kind == 3:
                                         start_ticks = pygame.time.get_ticks()
-                                        INFINITY_BULLET = True
+                                        PLAYER_LIST[1].time = pygame.time.get_ticks()
+                                        PLAYER_LIST[0].time = 0
+                                        PLAYER_LIST[1].infinite_bullet = True
+                                        PLAYER_LIST[0].infinite_bullet = False
 
             # Отрисовка пуль босса
             if boss_bullets_in_game:
@@ -629,21 +640,17 @@ while running:
                         if pl.bullets_in_game:
                             for bullet in list(pl.bullets_in_game):
                                 if bullet.rect.colliderect(entity.rect):
-                                    try:
+                                    if entity in enemy_in_game:
                                         enemy_in_game.remove(entity)
                                         pl.bullets_in_game.remove(bullet)
                                         pl.score += 1
                                         sound_death_enemy.play()
-                                    except ValueError:
-                                        bul_player = random.randint(1, 2)
-                                        if bul_player == 2 and PLAYER_LIST[1].lives > 0:
-                                            PLAYER_LIST[1].bullets_in_game.remove(bullet)
-                                            PLAYER_LIST[0].bullets_in_game.append(bullet)
-                                            PLAYER_LIST[1].score += 1
-                                            PLAYER_LIST[0].score -= 1
+                                    else:
+                                        pl.bullets_in_game.remove(bullet)
+                                        pl.score += 1
 
                                     # Спавн Баффов
-                                    if not INFINITY_BULLET:
+                                    if not pl.infinite_bullet:
                                         chance_buff = random.random()
                                         if len(buffs_in_game) < BUFF_AMOUNT:
                                             if chance_buff > BUFF_CHANCE_3:
@@ -677,20 +684,20 @@ while running:
                 if pl.lives > 0:
                     info_life = info_text.render('Жизни: ' + str(pl.lives), True, 'White')
                     info_score = info_text.render('Очки: ' + str(pl.score), True, 'White')
-                    if INFINITY_BULLET:
+                    if pl.infinite_bullet:
                         info_bullet = info_text.render('Пули: ∞', True, 'White')
-                        seconds = (pygame.time.get_ticks()-start_ticks)/1000
+                        seconds = (pygame.time.get_ticks()-pl.time)/1000
                         info_timer_infinity = info_text.render('00:0' + str(round(10-seconds)-1), True, 'Red')
-                        screen.blit(info_timer_infinity, (WIDTH // 2 - 24*2, 0))
+                        screen.blit(info_timer_infinity, (temp, 70))
                         if seconds >= 9:
-                            INFINITY_BULLET = False
+                            pl.infinite_bullet = False
                     else:
                         if pl.bullet - len(pl.bullets_in_game) <= 0:
                             info_bullet = info_text.render('Пули: 0', True, 'White')
                         else:
                             info_bullet = info_text.render('Пули: ' + str(pl.bullet - len(pl.bullets_in_game)), True, 'White')
                 else:
-                    info_life = info_text.render('Жизни: Умер', True, 'White')
+                    info_life = info_text.render('Жизни: 0', True, 'White')
                     info_score = info_text.render('Очки: ' + str(pl.score), True, 'White')
                     info_bullet = info_text.render('Пули: 0', True, 'White')
 
@@ -714,10 +721,13 @@ while running:
 
         else:
             max_score = 0
-            winner = 0
+            winner = -1
             for (el, pl) in enumerate(PLAYER_LIST):
-                if pl.score >= max_score:
+                if pl.score > max_score:
                     max_score = pl.score
+                    if winner == el:
+                        winner = 3
+                        break
                     winner = el
             if max_score >= record:
                 file_record = open('high_record.txt', 'w')
@@ -725,8 +735,15 @@ while running:
                 file_record.write(str(record))
                 file_record.close()
 
-            text_winner = info_text.render('Победитель: Игрок ' + str(winner+1), True, 'White')
-            screen.blit(text_winner, (0, 0))
+            if number_of_player == 2:
+                if winner != -1:
+                    text_winner = info_text.render('Победитель: Игрок ' + str(winner+1), True, 'White')
+                    text_winner_rect = text_winner.get_rect(center=(WIDTH//2, HEIGHT//2 - 100))
+                    screen.blit(text_winner, text_winner_rect)
+                else:
+                    text_winner = info_text.render('Победила Дружба!', True, 'White')
+                    text_winner_rect = text_winner.get_rect(center=(WIDTH//2, HEIGHT//2 - 100))
+                    screen.blit(text_winner, text_winner_rect)
 
         text_record = info_text.render('Рекорд: ' + str(record), True, 'White')
         screen.blit(text_record, (0, 24))
@@ -739,7 +756,7 @@ while running:
         btn_retry = Button('img/button1.png', 'img/button2.png', 'Заново', WIDTH//2-70, HEIGHT//2+25, (140, 75))
         btn_retry.update(screen)
 
-        btn_exit = Button('img/button2.png', 'img/button1.png', 'Выход', WIDTH//2-70, HEIGHT//2+90, (140, 75))
+        btn_exit = Button('img/button1.png', 'img/button2.png', 'Выход', WIDTH//2-70, HEIGHT//2+90, (140, 75))
         btn_exit.update(screen)
 
         for event in pygame.event.get():
@@ -749,7 +766,6 @@ while running:
             if btn_retry.is_click(event):
                 stage = 3
                 record = None
-                INFINITY_BULLET = False
                 BOSS_IN_GAME = False
                 boss_health = BOSS_HEALTH
                 enemy_in_game.clear()
@@ -758,6 +774,7 @@ while running:
                 pygame.mixer.music.play(-1)
                 print(PLAYER_LIST)
                 for pl in PLAYER_LIST:
+                    pl.infinite_bullet = False
                     pl.lives = LIVES
                     pl.bullet = AMOUNT_BULLET
                     pl.bullets_in_game.clear()
