@@ -31,14 +31,14 @@ ANGLE_ENEMY_SPEED = (4, 5)
 
 # Параметры всех врагов
 ENEMY_COUNT_DIFFICULTY = 15
-ENEMY_APPEAR_SPEED = (1500, 3000)  # чем меньше числа, тем быстрее появляется враг (1500, 3000)
+ENEMY_APPEAR_SPEED = (500, 1000)  # чем меньше числа, тем быстрее появляется враг (1500, 3000)
 BOSS_IN_GAME = False
 BOSS_HEALTH = 584
 
 # Параметры пуль
 BULLET_SIZE = (10, 10)
 BULLET_SPEED = 5
-AMOUNT_BULLET = 3
+AMOUNT_BULLET = 300
 
 # Параметры баффов ([1] - доб. Жизнь [2] - доб. макс Пуль [3] - бесконечные пули на некоторое время)
 BUFF_SIZE = (20, 20)
@@ -68,8 +68,6 @@ class Bullet(pygame.sprite.Sprite):
 
     # Движение пули
     def move(self):
-        # if 0 - self.size[1] < self.y < HEIGHT:
-        #     self.y -= self.speed
         self.y -= self.speed
         self.rect = pygame.Rect((self.x, self.y), self.size)
         self.draw(screen)
@@ -168,6 +166,8 @@ class BossEvent(pygame.sprite.Sprite):
         self.image = pygame.image.load(file_name).convert_alpha()
         self.image = pygame.transform.scale(self.image, self.size)
         self.rect = pygame.Rect((self.x, self.y), self.size)
+        self.health = BOSS_HEALTH
+        self.laser = Laser()
 
     # Обычная стрельба босса
     def shoot(self):
@@ -176,23 +176,37 @@ class BossEvent(pygame.sprite.Sprite):
             bul = Bullet('img/meteorite.png', random.randint(0, WIDTH - random_size), 0, (random_size, random_size),
                          -1 * BULLET_SPEED)
             boss_bullets_in_game.append(bul)
-            sound_shoot.play()
             pygame.time.set_timer(enemy_timer, random.randint(100, 900))
 
     # На разработке (до появление лазера поялвяется счетчик, игроку надо спрятаться, иначе не хило так продамажет)
     def fire(self):
-        if event.type == enemy_timer and not pause and random.randint(1, 100) <= 100:
-            print('ПИУ ПЯУ')
-            pygame.time.set_timer(enemy_timer, random.randint(100, 900))
+        if event.type == enemy_timer and not pause:
+            # print('ПИУ ПЯУ')
+            self.laser = Laser()
+            pygame.time.set_timer(enemy_timer, random.randint(500, 1500))
 
     # Отрисовка босса и его сцены
-    def draw(self, surf, health):
+    def draw(self, surf):
         surf.blit(self.image, (self.x, self.y))
         pygame.draw.rect(surf, 'White', (WIDTH//2 - 300, 17, 600, 50), 8)
-        pygame.draw.rect(surf, 'Red', (WIDTH//2 - 300 + 8, 24, health, 36))
+        pygame.draw.rect(surf, 'Red', (WIDTH//2 - 300 + 8, 24, self.health, 36))
         name_boss = info_text.render('Гайя', True, 'White')
         name_boss_rect = name_boss.get_rect(center=(WIDTH//2, 7))
         surf.blit(name_boss, name_boss_rect)
+
+
+class Laser(pygame.sprite.Sprite):
+    def __init__(self):
+        super().__init__()
+        self.size = (random.randint(50, 90), HEIGHT)
+        self.x = random.randint(0, WIDTH - self.size[0])
+        self.y = 0
+        self.image = pygame.image.load('img/laser.png').convert()
+        self.image = pygame.transform.scale(self.image, self.size)
+        self.rect = pygame.Rect((self.x, self.y), self.size)
+
+    def draw(self, surf):
+        surf.blit(self.image, (self.x, self.y))
 
 
 # Класс Врагов
@@ -457,7 +471,7 @@ def scene_pause():
         for entity in enemy_in_game:
             entity.draw(screen)
     if BOSS_IN_GAME:
-        boss.draw(screen, boss_health)
+        boss.draw(screen)
 
     pygame.mixer.music.pause()
 
@@ -552,7 +566,6 @@ info_text = pygame.font.Font('fonts/DelaGothicOne-Regular.ttf', 24)
 # Вспомогательные переменные, которые возможно нужны
 kind_buff = 0
 record = None
-boss_health = BOSS_HEALTH
 pause = False
 
 # Счетчик сцен (0 - Главное меню; 1 - Выбор количества игроков; 2 - Выбор управления; 3 - Игровое поле; 4 - Проигрыш)
@@ -635,8 +648,10 @@ while running:
 
                 # Атаки босса
                 if BOSS_IN_GAME:
-                    boss.shoot()
-                    # boss.fire()
+                    if boss.health > BOSS_HEALTH // 2:
+                        boss.shoot()
+                    else:
+                        boss.fire()
 
             # Пауза
             if pause:
@@ -721,7 +736,7 @@ while running:
                                         if not pl.infinite_bullet:
                                             chance_buff = random.random()
                                             if len(buffs_in_game) < BUFF_AMOUNT:
-                                                if chance_buff < 0.2:
+                                                if chance_buff < 0.1:
                                                     act = random.choices(BUFF_NAMES, BUFF_CHANCES)[0]
                                                     if act == 'Inf':
                                                         kind_buff = 3
@@ -736,15 +751,17 @@ while running:
                                                         kind_buff = 0
 
                 if BOSS_IN_GAME:
-                    boss.draw(screen, boss_health)
+                    if boss.health < BOSS_HEALTH // 2:
+                        boss.laser.draw(screen)
+                    boss.draw(screen)
                     for pl in temp_player_list:
                         if pl.bullets_in_game:
                             for entity in list(pl.bullets_in_game):
                                 if entity.rect.colliderect(boss.rect):
                                     pl.bullets_in_game.remove(entity)
-                                    boss_health -= 5
+                                    boss.health -= 5
 
-                    if boss_health <= 0:
+                    if boss.health <= 0:
                         for pl in temp_player_list:
                             pl.lives = 0
 
@@ -841,7 +858,7 @@ while running:
                 stage = 3
                 record = None
                 BOSS_IN_GAME = False
-                boss_health = BOSS_HEALTH
+                boss.health = BOSS_HEALTH
                 enemy_in_game.clear()
                 boss_bullets_in_game.clear()
                 buffs_in_game.clear()
@@ -856,16 +873,6 @@ while running:
 
             elif btn_exit.is_click(event):
                 running = False
-
-    # Вывод в консоль контрольных значений
-    # print('-------------------')
-    # print('Координаты игрока: ', player.x, player.y)
-    # print('Координаты ректа игрока: ', player.rect.x, player.rect.y)
-    # print('Количество врагов на экране: ', len(enemy_in_game))
-    # print('Количетсво пуль на экране: ', len(boss_bullets_in_game))
-    # print('Рект у игрока:', player.rect)
-    # print('Жив? ', current_lives, SCORE)
-    # print('-------------------\n')
 
     pygame.display.update()
 
