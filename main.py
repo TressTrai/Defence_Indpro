@@ -138,7 +138,7 @@ class Button(pygame.sprite.Sprite):
     def update(self, surf):
         mouse = pygame.mouse.get_pos()
 
-        if self.x <= mouse[0] <= self.size[0] + self.x and self.y <= mouse[1] <= self.size[1] + self.y:
+        if self.rect.collidepoint(mouse):
             self.image = self.image_active
         else:
             self.image = self.image_passive
@@ -147,12 +147,14 @@ class Button(pygame.sprite.Sprite):
 
     # Проверка нажата ли кнопка
     def is_click(self, event):
-        if self.rect.collidepoint(pygame.mouse.get_pos()) and event.type == pygame.MOUSEBUTTONUP:
+        mouse = pygame.mouse.get_pos()
+
+        if self.rect.collidepoint(mouse) and event.type == pygame.MOUSEBUTTONUP:
             return True
 
     # Отрисовка кнопки
     def draw(self, surf):
-        surf.blit(self.image, (self.x, self.y))
+        surf.blit(self.image, self.rect)
         surf.blit(self.text, self.text_rect)
 
 
@@ -183,7 +185,7 @@ class BossEvent(pygame.sprite.Sprite):
         if event.type == enemy_timer and not pause:
             # print('ПИУ ПЯУ')
             self.laser = Laser()
-            pygame.time.set_timer(enemy_timer, random.randint(500, 1500))
+            pygame.time.set_timer(enemy_timer, random.randint(1000, 3000))
 
     # Отрисовка босса и его сцены
     def draw(self, surf):
@@ -198,12 +200,26 @@ class BossEvent(pygame.sprite.Sprite):
 class Laser(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__()
-        self.size = (random.randint(50, 90), HEIGHT)
-        self.x = random.randint(0, WIDTH - self.size[0])
+        self.current_width, self.current_heigth = (1, 1)
+        self.current_size = (self.current_width, self.current_heigth)
+        self.width, self.heigth = random.randint(50, 90), HEIGHT
+        self.size = (self.width, self.heigth)
+        self.x = random.randint(0, WIDTH - self.width)
         self.y = 0
-        self.image = pygame.image.load('img/laser.png').convert()
-        self.image = pygame.transform.scale(self.image, self.size)
-        self.rect = pygame.Rect((self.x, self.y), self.size)
+        self.raw_image = pygame.image.load('img/laser.png').convert()
+        self.image = pygame.transform.scale(self.raw_image, self.current_size)
+        self.rect = pygame.Rect((self.x, self.y), self.current_size)
+
+    def spread(self):
+        if self.current_width < self.width:
+            self.current_width += 2
+            self.x -= 1
+        if self.current_heigth < self.heigth:
+            self.current_heigth += 15
+
+        self.current_size = (self.current_width, self.current_heigth)
+        self.image = pygame.transform.scale(self.raw_image, self.current_size)
+        self.rect = pygame.Rect((self.x, self.y), self.current_size)
 
     def draw(self, surf):
         surf.blit(self.image, (self.x, self.y))
@@ -752,6 +768,7 @@ while running:
 
                 if BOSS_IN_GAME:
                     if boss.health < BOSS_HEALTH // 2:
+                        boss.laser.spread()
                         boss.laser.draw(screen)
                     boss.draw(screen)
                     for pl in temp_player_list:
@@ -760,6 +777,9 @@ while running:
                                 if entity.rect.colliderect(boss.rect):
                                     pl.bullets_in_game.remove(entity)
                                     boss.health -= 5
+                        if boss.health < BOSS_HEALTH // 2:
+                            if boss.laser.rect.colliderect(pl.rect):
+                                pl.lives -= 1
 
                     if boss.health <= 0:
                         for pl in temp_player_list:
