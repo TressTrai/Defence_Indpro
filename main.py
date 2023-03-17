@@ -31,22 +31,21 @@ ANGLE_ENEMY_SPEED = (4, 5)
 
 # Параметры всех врагов
 ENEMY_COUNT_DIFFICULTY = 15
-ENEMY_APPEAR_SPEED = (500, 1000)  # чем меньше числа, тем быстрее появляется враг (1500, 3000)
+ENEMY_APPEAR_SPEED = (1500, 3000)  # чем меньше числа, тем быстрее появляется враг (1500, 3000)
 BOSS_IN_GAME = False
 BOSS_HEALTH = 584
 
 # Параметры пуль
 BULLET_SIZE = (10, 10)
 BULLET_SPEED = 5
-AMOUNT_BULLET = 300
+AMOUNT_BULLET = 3
 
 # Параметры баффов ([1] - доб. Жизнь [2] - доб. макс Пуль [3] - бесконечные пули на некоторое время)
 BUFF_SIZE = (20, 20)
 BUFF_SPEED = 4
 BUFF_AMOUNT = 5
-BUFF_CHANCE_1 = 0.95  # 0.95
-BUFF_CHANCE_2 = 0.93  # 0.93
-BUFF_CHANCE_3 = 0.99  # 0.99
+BUFF_CHANCES = [0.40, 0.45, 0.15]
+BUFF_NAMES = ['Heart', 'Bullet', 'Inf']
 
 # Списки объектов
 enemy_in_game = []
@@ -69,8 +68,9 @@ class Bullet(pygame.sprite.Sprite):
 
     # Движение пули
     def move(self):
-        if 0 - self.size[1] < self.y < HEIGHT:
-            self.y -= self.speed
+        # if 0 - self.size[1] < self.y < HEIGHT:
+        #     self.y -= self.speed
+        self.y -= self.speed
         self.rect = pygame.Rect((self.x, self.y), self.size)
         self.draw(screen)
 
@@ -172,16 +172,18 @@ class BossEvent(pygame.sprite.Sprite):
     # Обычная стрельба босса
     def shoot(self):
         if event.type == enemy_timer and not pause:
-            bul = Bullet('img/enemy_basic.png', random.randint(0, WIDTH - BULLET_SIZE[0]), 0, BULLET_SIZE, -1 * BULLET_SPEED)
+            random_size = random.randint(40, 80)
+            bul = Bullet('img/meteorite.png', random.randint(0, WIDTH - random_size), 0, (random_size, random_size),
+                         -1 * BULLET_SPEED)
             boss_bullets_in_game.append(bul)
             sound_shoot.play()
-            pygame.time.set_timer(enemy_timer, random.randint(100, 5000))
+            pygame.time.set_timer(enemy_timer, random.randint(100, 900))
 
     # На разработке (до появление лазера поялвяется счетчик, игроку надо спрятаться, иначе не хило так продамажет)
     def fire(self):
         if event.type == enemy_timer and not pause and random.randint(1, 100) <= 100:
             print('ПИУ ПЯУ')
-            pygame.time.set_timer(enemy_timer, random.randint(100, 5000))
+            pygame.time.set_timer(enemy_timer, random.randint(100, 900))
 
     # Отрисовка босса и его сцены
     def draw(self, surf, health):
@@ -411,9 +413,9 @@ def scene_sel_ctrl_type():
 
         if btn_mouse.is_click(event) and old_type_control != 0:
             TYPE_CONTROL = 0
-        if btn_ad.is_click(event) and old_type_control != 1:
+        elif btn_ad.is_click(event) and old_type_control != 1:
             TYPE_CONTROL = 1
-        if btn_arrow.is_click(event) and old_type_control != 2:
+        elif btn_arrow.is_click(event) and old_type_control != 2:
             TYPE_CONTROL = 2
 
         if TYPE_CONTROL != -1:
@@ -427,6 +429,7 @@ def scene_sel_ctrl_type():
                 pygame.mixer.music.play(-1)
 
                 print(PLAYER_LIST)
+                break
             else:
                 TYPE_CONTROL = -1
 
@@ -633,7 +636,7 @@ while running:
                 # Атаки босса
                 if BOSS_IN_GAME:
                     boss.shoot()
-                    boss.fire()
+                    # boss.fire()
 
             # Пауза
             if pause:
@@ -641,6 +644,9 @@ while running:
 
             # Не пауза
             else:
+                # Создание перемешанного списка ради разрешения конфликтных ситуаций в мульитплеере
+                temp_player_list = PLAYER_LIST.copy()
+                random.shuffle(temp_player_list)
 
                 # Отрисовка и столкновения баффов (в класс?)
                 if buffs_in_game:
@@ -650,7 +656,7 @@ while running:
                         if entity.y > HEIGHT:
                             buffs_in_game.remove(entity)
 
-                        for pl in PLAYER_LIST:
+                        for pl in temp_player_list:
                             if pl.rect.colliderect(entity.rect):
                                 try:
                                     buffs_in_game.remove(entity)
@@ -663,29 +669,15 @@ while running:
                                         pl.infinite_bullet = True
                                 except ValueError:
                                     print('Не удалось удалить бафф из списка')
-                                    buff_player = random.randint(1, 2)
-                                    if buff_player == 2 and PLAYER_LIST[1].lives > 0:
-                                        if entity.kind == 1:
-                                            PLAYER_LIST[1].lives += 1
-                                            PLAYER_LIST[0].lives -= 1
-                                        elif entity.kind == 2:
-                                            PLAYER_LIST[1].bullet += 1
-                                            PLAYER_LIST[0].bullet -= 1
-                                        elif entity.kind == 3:
-                                            start_ticks = pygame.time.get_ticks()
-                                            PLAYER_LIST[1].time = pygame.time.get_ticks()
-                                            PLAYER_LIST[0].time = 0
-                                            PLAYER_LIST[1].infinite_bullet = True
-                                            PLAYER_LIST[0].infinite_bullet = False
 
                 # Отрисовка пуль босса
                 if boss_bullets_in_game:
                     for entity in list(boss_bullets_in_game):
                         entity.move()
-                        if entity.y > HEIGHT - entity.size[1]:
+                        if entity.y > HEIGHT + entity.size[1]:
                             boss_bullets_in_game.remove(entity)
 
-                        for pl in PLAYER_LIST:
+                        for pl in temp_player_list:
                             if entity.rect.colliderect(pl.rect):
                                 try:
                                     boss_bullets_in_game.remove(entity)
@@ -693,9 +685,8 @@ while running:
                                 except ValueError:
                                     pl.lives -= 1
 
-
                 # Отрисовка игрока
-                for pl in PLAYER_LIST:
+                for pl in PLAYER_LIST: # Берется не перемешанный список, чтобы не было мерцания на экране
                     if pl.bullets_in_game:
                         for entity in list(pl.bullets_in_game):
                             entity.move()
@@ -710,45 +701,43 @@ while running:
                         entity.move()
                         if entity.y > HEIGHT or not (0 - entity.size[0] < entity.x < WIDTH):
                             enemy_in_game.remove(entity)
-                        for pl in PLAYER_LIST:
+
+                        for pl in temp_player_list:  # Столконовение игрока с врагом
                             if pl.rect.colliderect(entity.rect):
-                                try:
+                                if entity in enemy_in_game:
                                     enemy_in_game.remove(entity)
                                     pl.lives -= 1
-                                except ValueError:
-                                    pl.lives -= 1
-                                    print('Не удалось удалить врага из списка')
 
-                            if pl.bullets_in_game:
+                            elif pl.bullets_in_game:  # Столкновение пули игркоа с врагом
                                 for bullet in list(pl.bullets_in_game):
                                     if bullet.rect.colliderect(entity.rect):
                                         if entity in enemy_in_game:
                                             enemy_in_game.remove(entity)
                                             pl.bullets_in_game.remove(bullet)
-                                            PLAYER_LIST[random.randint(0, len(PLAYER_LIST)-1)].score += 1
+                                            pl.score += 1
                                             sound_death_enemy.play()
-                                        else:
-                                            pl.bullets_in_game.remove(bullet)
 
                                         # Спавн Баффов
                                         if not pl.infinite_bullet:
                                             chance_buff = random.random()
                                             if len(buffs_in_game) < BUFF_AMOUNT:
-                                                if chance_buff > BUFF_CHANCE_3:
-                                                    kind_buff = 3
-                                                elif chance_buff > BUFF_CHANCE_1:
-                                                    kind_buff = 1
-                                                elif chance_buff > BUFF_CHANCE_2:
-                                                    kind_buff = 2
+                                                if chance_buff < 0.2:
+                                                    act = random.choices(BUFF_NAMES, BUFF_CHANCES)[0]
+                                                    if act == 'Inf':
+                                                        kind_buff = 3
+                                                    elif act == 'Heart':
+                                                        kind_buff = 1
+                                                    elif act == 'Bullet':
+                                                        kind_buff = 2
 
-                                                if kind_buff != 0:
-                                                    buff = FallingBuff(kind_buff)
-                                                    buffs_in_game.append(buff)
-                                                    kind_buff = 0
+                                                    if kind_buff != 0:
+                                                        buff = FallingBuff(kind_buff)
+                                                        buffs_in_game.append(buff)
+                                                        kind_buff = 0
 
                 if BOSS_IN_GAME:
                     boss.draw(screen, boss_health)
-                    for pl in PLAYER_LIST:
+                    for pl in temp_player_list:
                         if pl.bullets_in_game:
                             for entity in list(pl.bullets_in_game):
                                 if entity.rect.colliderect(boss.rect):
@@ -756,12 +745,12 @@ while running:
                                     boss_health -= 5
 
                     if boss_health <= 0:
-                        for pl in PLAYER_LIST:
+                        for pl in temp_player_list:
                             pl.lives = 0
 
                 # Надписи на экране
                 temp = 0
-                for pl in PLAYER_LIST:
+                for pl in PLAYER_LIST:  # Чтоб не было мерцания берем упорядоченный список
                     if pl.lives > 0:
                         info_life = info_text.render('Жизни: ' + str(pl.lives), True, 'White')
                         info_score = info_text.render('Очки: ' + str(pl.score), True, 'White')
