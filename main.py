@@ -168,7 +168,6 @@ class BossEvent(pygame.sprite.Sprite):
         self.image = pygame.image.load(file_name).convert_alpha()
         self.image = pygame.transform.scale(self.image, self.size)
         self.rect = pygame.Rect((self.x, self.y), self.size)
-        self.rect_laser = None
 
     # Обычная стрельба босса
     def shoot(self):
@@ -540,7 +539,7 @@ sound_shoot = pygame.mixer.Sound('music/sound_shoot.mp3')
 sound_shoot.set_volume(0.5)
 sound_death_enemy = pygame.mixer.Sound('music/sound_death.mp3')
 sound_death_enemy.set_volume(0.5)
-pygame.mixer.music.load('music/background.mp3')
+pygame.mixer.music.load('music/background.ogg')
 pygame.mixer.music.set_volume(0.2)
 is_sound_on = True
 
@@ -582,7 +581,9 @@ while running:
         if is_game():
             # Музыка / не музыка
             if not is_sound_on:
-                pygame.mixer.music.pause()
+                pygame.mixer.music.set_volume(0)
+            else:
+                pygame.mixer.music.set_volume(0.2)
 
             # Ивенты
             for event in pygame.event.get():
@@ -615,8 +616,13 @@ while running:
                         if pl.score >= max_score:
                             max_score = pl.score
                     if ENEMY_APPEAR_SPEED[0] - 20 * max_score <= 0:
-                        BOSS_IN_GAME = True
-                        boss = BossEvent('img/button1.png')
+                        if not BOSS_IN_GAME:
+                            BOSS_IN_GAME = True
+                            boss = BossEvent('img/button1.png')
+                            pygame.mixer.music.load('music/boss_theme.mp3')
+                            if is_sound_on:
+                                pygame.mixer.music.play(-1)
+
                     else:
                         pygame.time.set_timer(enemy_timer, random.randint(ENEMY_APPEAR_SPEED[0]-20*max_score,
                                                                           ENEMY_APPEAR_SPEED[1]-30*max_score))
@@ -635,6 +641,7 @@ while running:
 
             # Не пауза
             else:
+
                 # Отрисовка и столкновения баффов (в класс?)
                 if buffs_in_game:
                     for entity in list(buffs_in_game):
