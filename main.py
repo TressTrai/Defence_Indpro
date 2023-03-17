@@ -1,6 +1,9 @@
 import pygame
 import random
 
+
+warning_tick = None
+
 # Инициализация
 pygame.init()
 
@@ -179,11 +182,11 @@ class BossEvent(pygame.sprite.Sprite):
             pygame.time.set_timer(enemy_timer, random.randint(100, 5000))
 
     # На разработке (до появление лазера поялвяется счетчик, игроку надо спрятаться, иначе не хило так продамажет)
-    def laser(self, surf, temp_height):
-        temp_x = random.randint(0, WIDTH)
-        temp_width = random.randint(WIDTH//6, WIDTH//3)
-        pygame.draw.rect(surf, 'White', (temp_x, 0, temp_width, temp_height))
-        self.rect_laser = pygame.Rect((temp_x, 0), (temp_width, temp_height))
+    def laser(self, surf):
+        if event.type == enemy_timer and not pause and random.randint(1, 100) <= 50:
+            laser = Enemy(2)
+            enemy_in_game.append(laser)
+            pygame.time.set_timer(enemy_timer, random.randint(100, 5000))
 
     # Отрисовка босса и его сцены
     def draw(self, surf, health):
@@ -218,6 +221,15 @@ class Enemy(pygame.sprite.Sprite):
 
             self.image = pygame.image.load('img/enemy_angle.png').convert_alpha()
             self.image = pygame.transform.scale(self.image, self.size)
+        # else:
+        #     self.size = (random.randint(WIDTH//6, WIDTH//3), HEIGHT)
+        #     self.speed = 0
+        #
+        #     self.image = pygame.image.load('img/laser.png').convert()
+        #     self.image = pygame.transform.scale(self.image, self.size)
+        #
+        #     self.x = random.randint(0, WIDTH - self.size[0])
+        #     self.y = 0
 
             # Поворот спрайта если в противоположную сторону направлен
             if self.speed_x < 0:
@@ -242,6 +254,7 @@ class Enemy(pygame.sprite.Sprite):
             if self.y < HEIGHT + self.size[1] and 0 - self.size[0] < self.x < WIDTH:
                 self.y += self.speed
                 self.x += self.speed_x
+        # elif self.kind == 2:
         self.rect = pygame.Rect((self.x, self.y), self.size)
         self.draw(screen)
 
@@ -325,12 +338,77 @@ class Player(pygame.sprite.Sprite):
 
 
 # --------- Сцены ------------
-def scene_sel_ctrl_type(number):
-    text_player = info_text.render(str(number + 1) + ' игрок', True, 'White')
+def scene_main_menu():
+    global running
+    global stage
+
+    text_caption = info_text.render(NAME_GAME, True, 'White')
+    text_caption_rect = text_caption.get_rect(center=(WIDTH // 2, 200))
+
+    screen.blit(text_caption, text_caption_rect)
+
+    btn_play = Button('img/button1.png', 'img/button2.png', 'Играть', WIDTH // 2 - 75, HEIGHT // 2, (150, 100))
+    btn_exit = Button('img/button1.png', 'img/button2.png', 'Выход', WIDTH // 2 - 75, HEIGHT // 2 + 100, (150, 100))
+
+    btn_play.update(screen)
+    btn_exit.update(screen)
+
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+        if btn_play.is_click(event):
+            stage += 1
+        elif btn_exit.is_click(event):
+            running = False
+
+
+def scene_sel_number_of_player():
+    global running
+    global stage
+    global number_of_player
+
+    text_chose_number = info_text.render('Сколько игроков?', True, 'White')
+    text_choose_number_rect = text_chose_number.get_rect(center=(WIDTH // 2, 200))
+    screen.blit(text_chose_number, text_choose_number_rect)
+
+    btn_one = Button('img/button1.png', 'img/button2.png', '1 игрок', 10, 150, (WIDTH // 2 - 20, 500))
+    btn_two = Button('img/button1.png', 'img/button2.png', '2 игрока', WIDTH // 2 + 10, 150, (WIDTH // 2 - 20, 500))
+
+    btn_one.update(screen)
+    btn_two.update(screen)
+
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+
+        if btn_one.is_click(event):
+            number_of_player = 1
+            stage += 1
+        elif btn_two.is_click(event):
+            number_of_player = 2
+            stage += 1
+
+
+def scene_sel_ctrl_type():
+    global running
+    global player_count
+    global stage
+    global TYPE_CONTROL
+    global number_of_player
+
+    text_player = info_text.render(str(player_count + 1) + ' игрок', True, 'White')
     text_player_rect = text_player.get_rect(center=(WIDTH//2, 150))
 
     text_choose_type_movement = info_text.render('Выберите тип управления: ', True, 'White')
     text_choose_type_movement_rect = text_choose_type_movement.get_rect(center=(WIDTH // 2, 200))
+
+    btn_mouse = Button('img/button1.png', 'img/button2.png', 'Мышка', 10, HEIGHT // 2, (250, 200))
+    btn_ad = Button('img/button1.png', 'img/button2.png', 'Клавиши AD', WIDTH // 2 - 125, HEIGHT // 2, (250, 200))
+    btn_arrow = Button('img/button1.png', 'img/button2.png', 'Стрелки', WIDTH - 260, HEIGHT // 2, (250, 200))
+
+    old_type_control = None
+    if player_count == 1:
+        old_type_control = PLAYER_LIST[0].kind
 
     if old_type_control != 0:
         btn_mouse.update(screen)
@@ -342,12 +420,41 @@ def scene_sel_ctrl_type(number):
     screen.blit(text_choose_type_movement, text_choose_type_movement_rect)
     screen.blit(text_player, text_player_rect)
 
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+
+        if btn_mouse.is_click(event) and old_type_control != 0:
+            TYPE_CONTROL = 0
+        if btn_ad.is_click(event) and old_type_control != 1:
+            TYPE_CONTROL = 1
+        if btn_arrow.is_click(event) and old_type_control != 2:
+            TYPE_CONTROL = 2
+
+        if TYPE_CONTROL != -1:
+            player = Player('img/player_' + str(player_count + 1) + '.png', TYPE_CONTROL)
+            PLAYER_LIST.append(player)
+            player_count += 1
+
+            if player_count == number_of_player:
+                stage += 1
+
+                pygame.mixer.music.play(-1)
+
+                print(PLAYER_LIST)
+            else:
+                TYPE_CONTROL = -1
+
 
 def scene_pause():
+    global running
+    global pause
+
     # Все возможные отрисовки
     if buffs_in_game:
         for entity in buffs_in_game:
             entity.draw(screen)
+
     if boss_bullets_in_game:
         for entity in boss_bullets_in_game:
             entity.draw(screen)
@@ -366,21 +473,48 @@ def scene_pause():
 
     pygame.mixer.music.pause()
 
-    alpha = pygame.Surface((WIDTH - 50, HEIGHT - 50))  # the size of your rect
-    alpha.set_alpha(64)  # alpha level
-    alpha.fill((255, 255, 255))  # this fills the entire surface
+    alpha = pygame.Surface((WIDTH - 50, HEIGHT - 50))
+    alpha.set_alpha(64)
+    alpha.fill((255, 255, 255))
     alpha_rect = alpha.get_rect(center=(WIDTH // 2, HEIGHT // 2))
     screen.blit(alpha, alpha_rect)
+
+    btn_volume = Button('img/sound_on.png', 'img/sound_on.png', '', 0, 0, (50, 50))
+
+    btn_volume.draw(screen)
 
     text_pause = info_text.render('Пауза', True, 'White')
     text_pause_rect = text_pause.get_rect(center=(WIDTH // 2, HEIGHT // 2))
 
     screen.blit(text_pause, text_pause_rect)
 
+    btn_continue = Button('img/button1.png', 'img/button2.png', 'Продолжить', WIDTH // 2 - 100, HEIGHT // 2 + 25,
+                          (200, 75))
+    btn_exit = Button('img/button1.png', 'img/button2.png', 'Выход', WIDTH // 2 - 100, HEIGHT // 2 + 100,
+                      (200, 75))
+
     btn_continue.update(screen)
     btn_exit.update(screen)
     btn_continue.draw(screen)
     btn_exit.draw(screen)
+
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+
+        if btn_continue.is_click(event) or (event.type == pygame.KEYUP and event.key == pygame.K_ESCAPE):
+            pygame.mixer.music.unpause()
+            pause = False
+        elif btn_exit.is_click(event):
+            running = False
+        # elif btn_volume.is_click(event):
+        #     if pygame.mixer.get_busy():
+        #         pygame.mixer.music.pause()
+        #         btn_volume.image = 'img/sound_off'
+        #     else:
+        #         pygame.mixer.music.play()
+        #         btn_volume.image = 'img/sound_on'
+
 
 # -----------------------------
 
@@ -414,7 +548,8 @@ boss_health = BOSS_HEALTH
 pause = False
 
 # Счетчик сцен (0 - Главное меню; 1 - Выбор количества игроков; 2 - Выбор управления; 3 - Игровое поле; 4 - Проигрыш)
-stage = 1
+stage = 0
+
 
 # Основной цикл игры
 running = True
@@ -424,72 +559,24 @@ while running:
 
     screen.fill('Black')
 
+    # Главное меню
+    if stage == 0:
+        scene_main_menu()
+
     # Выбор количества игроков
-    if stage == 1:
-        text_chose_number = info_text.render('Сколько игроков?', True, 'White')
-        text_choose_number_rect = text_chose_number.get_rect(center=(WIDTH // 2, 200))
-        screen.blit(text_chose_number, text_choose_number_rect)
-
-        btn_one = Button('img/button1.png', 'img/button2.png', '1 игрок', 10, 150, (WIDTH//2-20, 500))
-        btn_two = Button('img/button1.png', 'img/button2.png', '2 игрока', WIDTH // 2 + 10, 150, (WIDTH//2-20, 500))
-
-        btn_one.update(screen)
-        btn_two.update(screen)
-
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                running = False
-
-            if btn_one.is_click(event):
-                number_of_player = 1
-                stage += 1
-            elif btn_two.is_click(event):
-                number_of_player = 2
-                stage += 1
+    elif stage == 1:
+        scene_sel_number_of_player()
 
     # Выбор управления
     elif stage == 2 and number_of_player != 0:
-
-        btn_mouse = Button('img/button1.png', 'img/button2.png', 'Мышка', 10, HEIGHT // 2, (250, 200))
-        btn_ad = Button('img/button1.png', 'img/button2.png', 'Клавиши AD', WIDTH // 2 - 125, HEIGHT // 2, (250, 200))
-        btn_arrow = Button('img/button1.png', 'img/button2.png', 'Стрелки', WIDTH - 260, HEIGHT // 2, (250, 200))
-
-        old_type_control = None
-        if player_count == 1:
-            old_type_control = PLAYER_LIST[0].kind
-
-        scene_sel_ctrl_type(player_count)
-
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                running = False
-
-            if btn_mouse.is_click(event) and old_type_control != 0:
-                TYPE_CONTROL = 0
-            if btn_ad.is_click(event) and old_type_control != 1:
-                TYPE_CONTROL = 1
-            if btn_arrow.is_click(event) and old_type_control != 2:
-                TYPE_CONTROL = 2
-
-            if TYPE_CONTROL != -1:
-                player = Player('img/player_'+str(player_count+1)+'.png', TYPE_CONTROL)
-                PLAYER_LIST.append(player)
-                player_count += 1
-
-                if player_count == number_of_player:
-                    stage += 1
-
-                    pygame.mixer.music.play(-1)
-
-                    print(PLAYER_LIST)
-                else:
-                    TYPE_CONTROL = -1
+        scene_sel_ctrl_type()
 
     # Закончилась ли игра?
     GAME = False
     for pl in PLAYER_LIST:
         if pl.lives > 0:
             GAME = True
+
     if stage == 3 and not GAME:
         stage = 4
 
@@ -539,25 +626,11 @@ while running:
             # Атаки босса
             if BOSS_IN_GAME:
                 boss.shoot()
+                # boss.laser(screen)
 
         # Пауза
         if pause:
-            btn_continue = Button('img/button1.png', 'img/button2.png', 'Продолжить', WIDTH // 2 - 100, HEIGHT // 2 + 25,
-                                  (200, 75))
-            btn_exit = Button('img/button1.png', 'img/button2.png', 'Выход', WIDTH // 2 - 100, HEIGHT // 2 + 100,
-                              (200, 75))
-
             scene_pause()
-
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    running = False
-
-                if btn_continue.is_click(event) or (event.type == pygame.KEYUP and event.key == pygame.K_ESCAPE):
-                    pygame.mixer.music.unpause()
-                    pause = False
-                elif btn_exit.is_click(event):
-                    running = False
 
         # Не пауза
         else:
