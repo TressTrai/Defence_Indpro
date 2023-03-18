@@ -162,16 +162,24 @@ class Button(pygame.sprite.Sprite):
 
 # класс Босса
 class BossEvent(pygame.sprite.Sprite):
-    def __init__(self, file_name):
+    def __init__(self):
         super().__init__()
-        self.x = 0
-        self.y = -80
-        self.size = (WIDTH, 250)
-        self.image = pygame.image.load(file_name).convert_alpha()
-        self.image = pygame.transform.scale(self.image, self.size)
-        self.rect = pygame.Rect((self.x, self.y), self.size)
         self.health = BOSS_HEALTH
         self.laser = Laser(temp_player_list[0].x)
+
+        self.size = (WIDTH, 150)
+        self.image = pygame.image.load('img/buff_heart.png').convert_alpha()
+        self.image = pygame.transform.scale(self.image, self.size)
+        self.x = 0
+        self.y = -100
+        self.max_y = 0
+        self.rect = pygame.Rect((self.x, self.y), self.size)
+
+    # Эпичное появление
+    def appear(self):
+        if self.y < self.max_y:
+            self.y += 3
+        self.rect = pygame.Rect((self.x, self.y), self.size)
 
     # Обычная стрельба босса
     def shoot(self):
@@ -191,10 +199,13 @@ class BossEvent(pygame.sprite.Sprite):
     # Отрисовка босса и его сцены
     def draw(self, surf):
         surf.blit(self.image, (self.x, self.y))
-        pygame.draw.rect(surf, 'White', (WIDTH//2 - 300, 17, 600, 50), 8)
-        pygame.draw.rect(surf, 'Red', (WIDTH//2 - 300 + 8, 24, self.health, 36))
+        # Отображение коллайдера
+        pygame.draw.rect(surf, 'Red', self.rect, 2)
+
+        pygame.draw.rect(surf, 'White', (WIDTH//2 - 300, 32, 600, 50), 8)
+        pygame.draw.rect(surf, 'Red', (WIDTH//2 - 300 + 8, 39, self.health, 36))
         name_boss = info_text.render('Гайя', True, 'White')
-        name_boss_rect = name_boss.get_rect(center=(WIDTH//2, 7))
+        name_boss_rect = name_boss.get_rect(center=(WIDTH//2, 20))
         surf.blit(name_boss, name_boss_rect)
 
 
@@ -479,20 +490,21 @@ def scene_pause():
         for entity in buffs_in_game:
             entity.draw(screen)
 
-    if boss_bullets_in_game:
-        for entity in boss_bullets_in_game:
-            entity.draw(screen)
-
     for pl in PLAYER_LIST:
         if pl.bullets_in_game:
             for entity in pl.bullets_in_game:
                 entity.draw(screen)
         pl.draw(screen)
 
+    if boss_bullets_in_game:
+        for entity in boss_bullets_in_game:
+            entity.draw(screen)
+
     if enemy_in_game:
         for entity in enemy_in_game:
             entity.draw(screen)
-    if BOSS_IN_GAME:
+    if boss:
+        boss.laser.draw(screen)
         boss.draw(screen)
 
     pygame.mixer.music.pause()
@@ -671,7 +683,7 @@ while running:
                                                                           ENEMY_APPEAR_SPEED[1]-30*max_score))
 
                 if BOSS_IN_GAME and not boss and len(enemy_in_game) == 0:
-                    boss = BossEvent('img/button1.png')
+                    boss = BossEvent()
 
                 # Стрельба игрока
                 for entity in PLAYER_LIST:
@@ -782,6 +794,7 @@ while running:
                                     pl.lives -= 1
 
                 if boss:
+                    boss.appear()
                     if boss.health < 2 * BOSS_HEALTH // 3:
                         boss.laser.spread()
                         boss.laser.draw(screen)
