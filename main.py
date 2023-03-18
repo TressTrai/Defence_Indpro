@@ -15,7 +15,7 @@ NAME_GAME = 'Shoot in space'
 PLAYER_SIZE = (80, 80)
 PLAYER_SPEED = 6
 PLAYER_X, PLAYER_Y = (WIDTH - PLAYER_SIZE[0]) // 2, HEIGHT - PLAYER_SIZE[1]
-LIVES = 300
+LIVES = 3
 SCORE = 0
 TYPE_CONTROL = -1
 player_count = 0
@@ -31,14 +31,14 @@ ANGLE_ENEMY_SPEED = (4, 5)
 
 # Параметры всех врагов
 ENEMY_COUNT_DIFFICULTY = 15
-ENEMY_APPEAR_SPEED = (500, 1000)  # чем меньше числа, тем быстрее появляется враг (1500, 3000)
+ENEMY_APPEAR_SPEED = (1500, 3000)  # чем меньше числа, тем быстрее появляется враг (1500, 3000)
 BOSS_IN_GAME = False
 BOSS_HEALTH = 584
 
 # Параметры пуль
 BULLET_SIZE = (10, 10)
 BULLET_SPEED = 5
-AMOUNT_BULLET = 300
+AMOUNT_BULLET = 3
 
 # Параметры баффов ([1] - доб. Жизнь [2] - доб. макс Пуль [3] - бесконечные пули на некоторое время)
 BUFF_SIZE = (20, 20)
@@ -62,6 +62,8 @@ class Bullet(pygame.sprite.Sprite):
         self.speed = speed
         self.image = pygame.image.load(file_name).convert_alpha()
         self.image = pygame.transform.scale(self.image, size)
+        rand_angle = random.randint(0, 360)
+        self.image = pygame.transform.rotate(self.image, rand_angle)
         self.x = x
         self.y = y
         self.rect = pygame.Rect((self.x, self.y), size)
@@ -169,7 +171,7 @@ class BossEvent(pygame.sprite.Sprite):
         self.image = pygame.transform.scale(self.image, self.size)
         self.rect = pygame.Rect((self.x, self.y), self.size)
         self.health = BOSS_HEALTH
-        self.laser = Laser()
+        self.laser = Laser(temp_player_list[0].x)
 
     # Обычная стрельба босса
     def shoot(self):
@@ -180,12 +182,11 @@ class BossEvent(pygame.sprite.Sprite):
             boss_bullets_in_game.append(bul)
             pygame.time.set_timer(enemy_timer, random.randint(100, 900))
 
-    # На разработке (до появление лазера поялвяется счетчик, игроку надо спрятаться, иначе не хило так продамажет)
-    def fire(self):
-        if event.type == enemy_timer and not pause:
-            # print('ПИУ ПЯУ')
-            self.laser = Laser()
-            pygame.time.set_timer(enemy_timer, random.randint(1000, 3000))
+    # Атака самонаводящимся лазером
+    def fire(self, player_x):
+        if event.type == enemy_timer_2 and not pause:
+            self.laser = Laser(player_x)
+            pygame.time.set_timer(enemy_timer_2, random.randint(1000, 2500))
 
     # Отрисовка босса и его сцены
     def draw(self, surf):
@@ -198,13 +199,13 @@ class BossEvent(pygame.sprite.Sprite):
 
 
 class Laser(pygame.sprite.Sprite):
-    def __init__(self):
+    def __init__(self, player_x):
         super().__init__()
         self.current_width, self.current_heigth = (1, 1)
         self.current_size = (self.current_width, self.current_heigth)
         self.width, self.heigth = random.randint(50, 90), HEIGHT
         self.size = (self.width, self.heigth)
-        self.x = random.randint(0, WIDTH - self.width)
+        self.x = player_x
         self.y = 0
         self.raw_image = pygame.image.load('img/laser.png').convert()
         self.image = pygame.transform.scale(self.raw_image, self.current_size)
@@ -261,7 +262,7 @@ class Enemy(pygame.sprite.Sprite):
             else:
                 self.x = random.randint(0, WIDTH//2)
 
-        self.rect = pygame.Rect((self.x, self.y), self.size)
+        self.rect = pygame.Rect((self.x + 5, self.y + 5), (self.size[0]-10, self.size[1]-10))
 
     # Движение врага
     def move(self):
@@ -272,12 +273,14 @@ class Enemy(pygame.sprite.Sprite):
             if self.y < HEIGHT + self.size[1] and 0 - self.size[0] < self.x < WIDTH:
                 self.y += self.speed
                 self.x += self.speed_x
-        self.rect = pygame.Rect((self.x, self.y), self.size)
+        self.rect = pygame.Rect((self.x + 10, self.y + 10), (self.size[0] - 20, self.size[1] - 20))
         self.draw(screen)
 
     # Отрисовка врага
     def draw(self, surf):
         surf.blit(self.image, (self.x, self.y))
+        # отображение коллайдера
+        pygame.draw.rect(surf, 'Red', self.rect, 2)
 
 
 # Класс Игрока
@@ -301,7 +304,7 @@ class Player(pygame.sprite.Sprite):
 
         self.image = pygame.image.load(file_name).convert_alpha()
         self.image = pygame.transform.scale(self.image, self.size)
-        self.rect = pygame.Rect((self.x, self.y), self.size)
+        self.rect = pygame.Rect((self.x + 5, self.y + 5), (self.size[0]-10, self.size[1]-10))
         self.kind = type_control
         self.lives = LIVES
         self.bullet = AMOUNT_BULLET
@@ -315,24 +318,26 @@ class Player(pygame.sprite.Sprite):
         if self.lives > 0:
             if self.kind == 1:
                 key_pressed = pygame.key.get_pressed()
-                if key_pressed[pygame.K_d] and self.x < WIDTH - self.size[0]:
+                if key_pressed[pygame.K_d] and self.x < WIDTH - self.size[0]//2:
                     self.x += self.speed
-                if key_pressed[pygame.K_a] and self.x > 0:
+                if key_pressed[pygame.K_a] and self.x > 0 - self.size[0]//2:
                     self.x -= self.speed
             elif self.kind == 2:
                 key_pressed = pygame.key.get_pressed()
-                if key_pressed[pygame.K_RIGHT] and self.x < WIDTH - self.size[0]:
+                if key_pressed[pygame.K_RIGHT] and self.x < WIDTH - self.size[0]//2:
                     self.x += self.speed
-                if key_pressed[pygame.K_LEFT] and self.x > 0:
+                if key_pressed[pygame.K_LEFT] and self.x > 0 - self.size[0]//2:
                     self.x -= self.speed
             elif self.kind == 0:
                 self.x = pygame.mouse.get_pos()[0] - self.size[0]//2
-            self.rect = pygame.Rect((self.x, self.y), self.size)
+            self.rect = pygame.Rect((self.x + 10, self.y + 10), (self.size[0] - 20, self.size[1] - 20))
 
     # Отрисовка Игрока
     def draw(self, surf):
         if self.lives > 0:
             surf.blit(self.image, (self.x, self.y))
+            # отображение коллайдера
+            pygame.draw.rect(surf, 'Red', self.rect, 2)
 
     # Пиу-пяу
     def shoot(self):
@@ -563,7 +568,9 @@ pygame.display.set_caption(NAME_GAME)
 # Настройка часов
 clock = pygame.time.Clock()
 enemy_timer = pygame.USEREVENT + 1
+enemy_timer_2 = pygame.USEREVENT + 2
 pygame.time.set_timer(enemy_timer, random.randint(ENEMY_APPEAR_SPEED[0], ENEMY_APPEAR_SPEED[1]))
+pygame.time.set_timer(enemy_timer_2, random.randint(ENEMY_APPEAR_SPEED[0], ENEMY_APPEAR_SPEED[1]))
 start_ticks = None
 
 
@@ -617,6 +624,10 @@ while running:
             else:
                 pygame.mixer.music.set_volume(0.2)
 
+            # Создание перемешанного списка ради разрешения конфликтных ситуаций в мульитплеере
+            temp_player_list = PLAYER_LIST.copy()
+            random.shuffle(temp_player_list)
+
             # Ивенты
             for event in pygame.event.get():
 
@@ -652,8 +663,7 @@ while running:
                             BOSS_IN_GAME = True
                             boss = BossEvent('img/button1.png')
                             pygame.mixer.music.load('music/boss_theme.mp3')
-                            if is_sound_on:
-                                pygame.mixer.music.play(-1)
+                            pygame.mixer.music.play(-1)
 
                     else:
                         pygame.time.set_timer(enemy_timer, random.randint(ENEMY_APPEAR_SPEED[0]-20*max_score,
@@ -664,10 +674,13 @@ while running:
 
                 # Атаки босса
                 if BOSS_IN_GAME:
-                    if boss.health > BOSS_HEALTH // 2:
+                    if 2 * BOSS_HEALTH // 3 < boss.health:
                         boss.shoot()
+                    elif BOSS_HEALTH // 3 < boss.health < 2 * BOSS_HEALTH // 3:
+                        boss.fire(temp_player_list[0].x + temp_player_list[0].size[0]//2)
                     else:
-                        boss.fire()
+                        boss.shoot()
+                        boss.fire(temp_player_list[0].x + temp_player_list[0].size[0] // 2)
 
             # Пауза
             if pause:
@@ -675,9 +688,6 @@ while running:
 
             # Не пауза
             else:
-                # Создание перемешанного списка ради разрешения конфликтных ситуаций в мульитплеере
-                temp_player_list = PLAYER_LIST.copy()
-                random.shuffle(temp_player_list)
 
                 # Отрисовка и столкновения баффов (в класс?)
                 if buffs_in_game:
@@ -700,21 +710,6 @@ while running:
                                         pl.infinite_bullet = True
                                 except ValueError:
                                     print('Не удалось удалить бафф из списка')
-
-                # Отрисовка пуль босса
-                if boss_bullets_in_game:
-                    for entity in list(boss_bullets_in_game):
-                        entity.move()
-                        if entity.y > HEIGHT + entity.size[1]:
-                            boss_bullets_in_game.remove(entity)
-
-                        for pl in temp_player_list:
-                            if entity.rect.colliderect(pl.rect):
-                                try:
-                                    boss_bullets_in_game.remove(entity)
-                                    pl.lives -= 1
-                                except ValueError:
-                                    pl.lives -= 1
 
                 # Отрисовка игрока
                 for pl in PLAYER_LIST: # Берется не перемешанный список, чтобы не было мерцания на экране
@@ -766,8 +761,23 @@ while running:
                                                         buffs_in_game.append(buff)
                                                         kind_buff = 0
 
+                # Отрисовка пуль босса
+                if boss_bullets_in_game:
+                    for entity in list(boss_bullets_in_game):
+                        entity.move()
+                        if entity.y > HEIGHT + entity.size[1]:
+                            boss_bullets_in_game.remove(entity)
+
+                        for pl in temp_player_list:
+                            if entity.rect.colliderect(pl.rect):
+                                try:
+                                    boss_bullets_in_game.remove(entity)
+                                    pl.lives -= 1
+                                except ValueError:
+                                    pl.lives -= 1
+
                 if BOSS_IN_GAME:
-                    if boss.health < BOSS_HEALTH // 2:
+                    if boss.health < 2 * BOSS_HEALTH // 3:
                         boss.laser.spread()
                         boss.laser.draw(screen)
                     boss.draw(screen)
@@ -877,11 +887,13 @@ while running:
             if btn_retry.is_click(event):
                 stage = 3
                 record = None
+                if BOSS_IN_GAME:
+                    boss.health = BOSS_HEALTH
                 BOSS_IN_GAME = False
-                boss.health = BOSS_HEALTH
                 enemy_in_game.clear()
                 boss_bullets_in_game.clear()
                 buffs_in_game.clear()
+                pygame.mixer.music.load('music/background.ogg')
                 pygame.mixer.music.play(-1)
                 print(PLAYER_LIST)
                 for pl in PLAYER_LIST:
