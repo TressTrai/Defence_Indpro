@@ -180,13 +180,13 @@ class BossEvent(pygame.sprite.Sprite):
             bul = Bullet('img/meteorite.png', random.randint(0, WIDTH - random_size), 0, (random_size, random_size),
                          -1 * BULLET_SPEED)
             boss_bullets_in_game.append(bul)
-            pygame.time.set_timer(enemy_timer, random.randint(100, 900))
+            pygame.time.set_timer(enemy_timer, random.randint(200, 1000))
 
     # Атака самонаводящимся лазером
     def fire(self, player_x):
         if event.type == enemy_timer_2 and not pause:
             self.laser = Laser(player_x)
-            pygame.time.set_timer(enemy_timer_2, random.randint(1000, 2500))
+            pygame.time.set_timer(enemy_timer_2, random.randint(1500, 3000))
 
     # Отрисовка босса и его сцены
     def draw(self, surf):
@@ -198,6 +198,7 @@ class BossEvent(pygame.sprite.Sprite):
         surf.blit(name_boss, name_boss_rect)
 
 
+# класс Лазера для босса
 class Laser(pygame.sprite.Sprite):
     def __init__(self, player_x):
         super().__init__()
@@ -590,6 +591,7 @@ info_text = pygame.font.Font('fonts/DelaGothicOne-Regular.ttf', 24)
 kind_buff = 0
 record = None
 pause = False
+boss = None
 
 # Счетчик сцен (0 - Главное меню; 1 - Выбор количества игроков; 2 - Выбор управления; 3 - Игровое поле; 4 - Проигрыш)
 stage = 0
@@ -661,19 +663,22 @@ while running:
                     if ENEMY_APPEAR_SPEED[0] - 20 * max_score <= 0:
                         if not BOSS_IN_GAME:
                             BOSS_IN_GAME = True
-                            boss = BossEvent('img/button1.png')
                             pygame.mixer.music.load('music/boss_theme.mp3')
                             pygame.mixer.music.play(-1)
 
                     else:
                         pygame.time.set_timer(enemy_timer, random.randint(ENEMY_APPEAR_SPEED[0]-20*max_score,
                                                                           ENEMY_APPEAR_SPEED[1]-30*max_score))
+
+                if BOSS_IN_GAME and not boss and len(enemy_in_game) == 0:
+                    boss = BossEvent('img/button1.png')
+
                 # Стрельба игрока
                 for entity in PLAYER_LIST:
                     entity.shoot()
 
                 # Атаки босса
-                if BOSS_IN_GAME:
+                if boss:
                     if 2 * BOSS_HEALTH // 3 < boss.health:
                         boss.shoot()
                     elif BOSS_HEALTH // 3 < boss.health < 2 * BOSS_HEALTH // 3:
@@ -740,7 +745,7 @@ while running:
                                         if entity in enemy_in_game:
                                             enemy_in_game.remove(entity)
                                             pl.bullets_in_game.remove(bullet)
-                                            pl.score += 1
+                                            pl.score += 5
                                             sound_death_enemy.play()
 
                                         # Спавн Баффов
@@ -776,7 +781,7 @@ while running:
                                 except ValueError:
                                     pl.lives -= 1
 
-                if BOSS_IN_GAME:
+                if boss:
                     if boss.health < 2 * BOSS_HEALTH // 3:
                         boss.laser.spread()
                         boss.laser.draw(screen)
