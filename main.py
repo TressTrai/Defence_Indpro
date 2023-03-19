@@ -349,7 +349,7 @@ class Player(pygame.sprite.Sprite):
         if self.lives > 0:
             surf.blit(self.image, (self.x, self.y))
             # отображение коллайдера
-            pygame.draw.rect(surf, 'Red', self.rect, 2)
+            # pygame.draw.rect(surf, 'Red', self.rect, 2)
 
     # Пиу-пяу
     def shoot(self):
@@ -590,14 +590,20 @@ start_ticks = None
 # Настройка музыки
 sound_shoot = pygame.mixer.Sound('music/sound_shoot.mp3')
 sound_shoot.set_volume(0.5)
-sound_death_enemy = pygame.mixer.Sound('music/sound_death.mp3')
-sound_death_enemy.set_volume(0.5)
+sound_death_enemy = pygame.mixer.Sound('music/sound_enemy_death.mp3')
+sound_death_enemy.set_volume(0.8)
+sound_injury_player = pygame.mixer.Sound('music/sound_injury.mp3')
+sound_injury_player.set_volume(0.5)
+sound_buff_bullet = pygame.mixer.Sound('music/sound_buff_bullet.mp3')
+sound_buff_bullet.set_volume(0.5)
+sound_buff_heart = pygame.mixer.Sound('music/sound_buff_heart.mp3')
+sound_buff_heart.set_volume(0.5)
 pygame.mixer.music.load('music/background.ogg')
 pygame.mixer.music.set_volume(0.2)
 is_sound_on = True
 
 # Настройка текста
-info_text = pygame.font.Font('fonts/DelaGothicOne-Regular.ttf', 24)
+info_text = pygame.font.Font('fonts/DelaGothicOne-Regular.ttf', 19)
 
 # Вспомогательные переменные, которые возможно нужны
 kind_buff = 0
@@ -634,10 +640,10 @@ while running:
     # Игровое поле
     if stage == 3:
         if is_game():
+
             # Динамичный фон
             screen.blit(background, (0, background_pos))
             screen.blit(background, (0, background_pos - 1800))
-
             if not pause:
                 background_pos += 3
                 if background_pos >= 1800:
@@ -671,9 +677,8 @@ while running:
                         pause = True
                         break
 
-                # Спавн врагов (Засунуть в класс?)
+                # Спавн врагов (в класс?)
                 if not BOSS_IN_GAME and event.type == enemy_timer and len(enemy_in_game) < ENEMY_COUNT_DIFFICULTY:
-
                     kind_enemy = random.randint(0, 1)
                     enemy = Enemy(kind_enemy)
                     enemy_in_game.append(enemy)
@@ -726,20 +731,21 @@ while running:
 
                         for pl in temp_player_list:
                             if pl.rect.colliderect(entity.rect):
-                                try:
+                                if entity in buffs_in_game:
                                     buffs_in_game.remove(entity)
                                     if entity.kind == 1:
                                         pl.lives += 1
+                                        sound_buff_heart.play()
                                     elif entity.kind == 2:
                                         pl.bullet += 1
+                                        sound_buff_bullet.play()
                                     elif entity.kind == 3:
                                         pl.time = pygame.time.get_ticks()
                                         pl.infinite_bullet = True
-                                except ValueError:
-                                    print('Не удалось удалить бафф из списка')
+                                        sound_buff_bullet.play()
 
                 # Отрисовка игрока
-                for pl in PLAYER_LIST: # Берется не перемешанный список, чтобы не было мерцания на экране
+                for pl in PLAYER_LIST:  # Берется не перемешанный список, чтобы не было мерцания на экране
                     if pl.bullets_in_game:
                         for entity in list(pl.bullets_in_game):
                             entity.move()
@@ -756,10 +762,11 @@ while running:
                             enemy_in_game.remove(entity)
 
                         for pl in temp_player_list:  # Столконовение игрока с врагом
-                            if pl.rect.colliderect(entity.rect):
+                            if pl.rect.colliderect(entity.rect) and pl.lives > 0:
                                 if entity in enemy_in_game:
                                     enemy_in_game.remove(entity)
                                     pl.lives -= 1
+                                    sound_injury_player.play()
 
                             elif pl.bullets_in_game:  # Столкновение пули игркоа с врагом
                                 for bullet in list(pl.bullets_in_game):
@@ -796,12 +803,11 @@ while running:
                             boss_bullets_in_game.remove(entity)
 
                         for pl in temp_player_list:
-                            if entity.rect.colliderect(pl.rect):
-                                try:
+                            if entity.rect.colliderect(pl.rect) and pl.lives > 0:
+                                if entity in boss_bullets_in_game:
                                     boss_bullets_in_game.remove(entity)
                                     pl.lives -= 1
-                                except ValueError:
-                                    pl.lives -= 1
+                                    sound_injury_player.play()
 
                 if boss:
                     boss.appear()
@@ -818,6 +824,7 @@ while running:
                         if boss.health < 2 * BOSS_HEALTH // 3:
                             if boss.laser.rect.colliderect(pl.rect):
                                 pl.lives -= 1
+                                sound_injury_player.play()
 
                     if boss.health <= 0:
                         for pl in temp_player_list:
@@ -825,7 +832,7 @@ while running:
 
                 # Надписи на экране
                 temp = 0
-                for pl in PLAYER_LIST:  # Чтоб не было мерцания берем упорядоченный список
+                for (i, pl) in enumerate(PLAYER_LIST):  # Чтоб не было мерцания берем упорядоченный список
                     if pl.lives > 0:
                         info_life = info_text.render('Жизни: ' + str(pl.lives), True, 'White')
                         info_score = info_text.render('Очки: ' + str(pl.score), True, 'White')
@@ -846,10 +853,19 @@ while running:
                         info_score = info_text.render('Очки: ' + str(pl.score), True, 'White')
                         info_bullet = info_text.render('Пули: 0', True, 'White')
 
-                    screen.blit(info_life, (temp, 0))
-                    screen.blit(info_score, (temp, 24))
-                    screen.blit(info_bullet, (temp, 48))
-                    temp += WIDTH - 200
+                    if i == 0:
+                        info_life_rect = info_life.get_rect(topleft=(0, 0))
+                        info_score_rect = info_life.get_rect(topleft=(0, 21))
+                        info_bullet_rect = info_life.get_rect(topleft=(0, 42))
+                    else:
+                        info_life_rect = info_life.get_rect(topright=(WIDTH, 0))
+                        info_score_rect = info_life.get_rect(topright=(WIDTH, 21))
+                        info_bullet_rect = info_life.get_rect(topright=(WIDTH, 42))
+
+                    screen.blit(info_life, info_life_rect)
+                    screen.blit(info_score, info_score_rect)
+                    screen.blit(info_bullet, info_bullet_rect)
+                    temp += WIDTH - 100
 
         # Переключение сцены
         else:
@@ -884,7 +900,7 @@ while running:
                 file_record.write(str(record))
                 file_record.close()
 
-            if number_of_player == 2:
+            if len(PLAYER_LIST) == 2:
                 if winner != -1:
                     text_winner = info_text.render('Победитель: Игрок ' + str(winner+1), True, 'White')
                     text_winner_rect = text_winner.get_rect(center=(WIDTH//2, HEIGHT//2 - 100))
@@ -915,21 +931,34 @@ while running:
             if btn_retry.is_click(event):
                 stage = 3
                 record = None
+
                 if boss:
                     boss = None
                 BOSS_IN_GAME = False
+
                 enemy_in_game.clear()
                 boss_bullets_in_game.clear()
                 buffs_in_game.clear()
+
                 pygame.mixer.music.load('music/background.ogg')
                 pygame.mixer.music.play(-1)
+
                 print(PLAYER_LIST)
+                # for pl in PLAYER_LIST:
+                #     pl.infinite_bullet = False
+                #     pl.lives = LIVES
+                #     pl.bullet = AMOUNT_BULLET
+                #     pl.bullets_in_game.clear()
+                #     pl.score = 0
+                ctrl_player = []
+                player_count = 0
                 for pl in PLAYER_LIST:
-                    pl.infinite_bullet = False
-                    pl.lives = LIVES
-                    pl.bullet = AMOUNT_BULLET
-                    pl.bullets_in_game.clear()
-                    pl.score = 0
+                    ctrl_player.append(pl.kind)
+                PLAYER_LIST.clear()
+                for pl in range(len(ctrl_player)):
+                    player = Player('img/player_'+str(pl+1)+'.png', ctrl_player[pl])
+                    PLAYER_LIST.append(player)
+                    player_count += 1
 
             elif btn_exit.is_click(event):
                 running = False
