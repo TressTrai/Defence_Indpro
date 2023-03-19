@@ -23,7 +23,7 @@ number_of_player = 0
 
 # Параметры базового врага (0)
 BASIC_ENEMY_SIZE = (50, 50)
-BASIC_ENEMY_SPEED = (3, 5)
+BASIC_ENEMY_SPEED = (4, 6)
 
 # Параметры углового врага (1)
 ANGLE_ENEMY_SIZE = (60, 60)
@@ -250,7 +250,7 @@ class Enemy(pygame.sprite.Sprite):
             self.speed = random.randint(BASIC_ENEMY_SPEED[0], BASIC_ENEMY_SPEED[1])
 
             self.image = pygame.image.load('img/enemy_basic.png').convert_alpha()
-            self.image = pygame.transform.scale(self.image, self.size)
+            self.image = pygame.transform.smoothscale(self.image, self.size)
 
             self.x = random.randint(0, WIDTH - self.size[0])
             self.y = 0 - self.size[0]
@@ -260,7 +260,7 @@ class Enemy(pygame.sprite.Sprite):
             self.speed_x = random.choice([-1, 1]) * random.uniform(3, 10)
 
             self.image = pygame.image.load('img/enemy_angle.png').convert_alpha()
-            self.image = pygame.transform.scale(self.image, self.size)
+            self.image = pygame.transform.smoothscale(self.image, self.size)
 
             # Поворот спрайта если в противоположную сторону направлен
             if self.speed_x < 0:
@@ -285,14 +285,14 @@ class Enemy(pygame.sprite.Sprite):
             if self.y < HEIGHT + self.size[1] and 0 - self.size[0] < self.x < WIDTH:
                 self.y += self.speed
                 self.x += self.speed_x
-        self.rect = pygame.Rect((self.x + 10, self.y + 10), (self.size[0] - 20, self.size[1] - 20))
+        self.rect = pygame.Rect((self.x + 5, self.y + 5), (self.size[0] - 10, self.size[1] - 10))
         self.draw(screen)
 
     # Отрисовка врага
     def draw(self, surf):
         surf.blit(self.image, (self.x, self.y))
         # отображение коллайдера
-        pygame.draw.rect(surf, 'Red', self.rect, 2)
+        # pygame.draw.rect(surf, 'Red', self.rect, 2)
 
 
 # Класс Игрока
@@ -608,6 +608,8 @@ boss = None
 # Счетчик сцен (0 - Главное меню; 1 - Выбор количества игроков; 2 - Выбор управления; 3 - Игровое поле; 4 - Проигрыш)
 stage = 0
 
+background = pygame.image.load('img/background.png').convert()
+background_pos = 0
 
 # Основной цикл игры
 running = True
@@ -632,6 +634,15 @@ while running:
     # Игровое поле
     if stage == 3:
         if is_game():
+            # Динамичный фон
+            screen.blit(background, (0, background_pos))
+            screen.blit(background, (0, background_pos - 1800))
+
+            if not pause:
+                background_pos += 3
+                if background_pos >= 1800:
+                    background_pos = 0
+
             # Музыка / не музыка
             if not is_sound_on:
                 pygame.mixer.music.set_volume(0)
@@ -705,7 +716,6 @@ while running:
 
             # Не пауза
             else:
-
                 # Отрисовка и столкновения баффов (в класс?)
                 if buffs_in_game:
                     for entity in list(buffs_in_game):
@@ -805,7 +815,7 @@ while running:
                                 if entity.rect.colliderect(boss.rect):
                                     pl.bullets_in_game.remove(entity)
                                     boss.health -= 5
-                        if boss.health < BOSS_HEALTH // 2:
+                        if boss.health < 2 * BOSS_HEALTH // 3:
                             if boss.laser.rect.colliderect(pl.rect):
                                 pl.lives -= 1
 
@@ -905,8 +915,8 @@ while running:
             if btn_retry.is_click(event):
                 stage = 3
                 record = None
-                if BOSS_IN_GAME:
-                    boss.health = BOSS_HEALTH
+                if boss:
+                    boss = None
                 BOSS_IN_GAME = False
                 enemy_in_game.clear()
                 boss_bullets_in_game.clear()
