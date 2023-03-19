@@ -202,7 +202,7 @@ class BossEvent(pygame.sprite.Sprite):
         # Отображение коллайдера
         pygame.draw.rect(surf, 'Red', self.rect, 2)
 
-        pygame.draw.rect(surf, 'White', (WIDTH//2 - 300, 32, 600, 50), 8)
+        pygame.draw.rect(surf, 'White', (WIDTH//2 - 300, 32, 600, 50), 6)
         pygame.draw.rect(surf, 'Red', (WIDTH//2 - 300 + 8, 39, self.health, 36))
         name_boss = info_text.render('Гайя', True, 'White')
         name_boss_rect = name_boss.get_rect(center=(WIDTH//2, 20))
@@ -822,7 +822,7 @@ while running:
                                     pl.bullets_in_game.remove(entity)
                                     boss.health -= 5
                         if boss.health < 2 * BOSS_HEALTH // 3:
-                            if boss.laser.rect.colliderect(pl.rect):
+                            if boss.laser.rect.colliderect(pl.rect) and pl.lives > 0:
                                 pl.lives -= 1
                                 sound_injury_player.play()
 
@@ -831,8 +831,8 @@ while running:
                             pl.lives = 0
 
                 # Надписи на экране
-                temp = 0
                 for (i, pl) in enumerate(PLAYER_LIST):  # Чтоб не было мерцания берем упорядоченный список
+                    info_player = info_text.render(str(i + 1) + ' игрок', True, 'White')
                     if pl.lives > 0:
                         info_life = info_text.render('Жизни: ' + str(pl.lives), True, 'White')
                         info_score = info_text.render('Очки: ' + str(pl.score), True, 'White')
@@ -840,7 +840,11 @@ while running:
                             info_bullet = info_text.render('Пули: ∞', True, 'White')
                             seconds = (pygame.time.get_ticks()-pl.time)/1000
                             info_timer_infinity = info_text.render('00:0' + str(round(10-seconds)-1), True, 'Red')
-                            screen.blit(info_timer_infinity, (temp, 70))
+                            if i == 0:
+                                info_timer_infinity_rect = info_timer_infinity.get_rect(topleft=(0, 84))
+                            else:
+                                info_timer_infinity_rect = info_timer_infinity.get_rect(topright=(WIDTH, 63))
+                            screen.blit(info_timer_infinity, info_timer_infinity_rect)
                             if seconds >= 9:
                                 pl.infinite_bullet = False
                         else:
@@ -854,18 +858,24 @@ while running:
                         info_bullet = info_text.render('Пули: 0', True, 'White')
 
                     if i == 0:
-                        info_life_rect = info_life.get_rect(topleft=(0, 0))
-                        info_score_rect = info_life.get_rect(topleft=(0, 21))
-                        info_bullet_rect = info_life.get_rect(topleft=(0, 42))
-                    else:
-                        info_life_rect = info_life.get_rect(topright=(WIDTH, 0))
-                        info_score_rect = info_life.get_rect(topright=(WIDTH, 21))
-                        info_bullet_rect = info_life.get_rect(topright=(WIDTH, 42))
+                        info_player_rect = info_player.get_rect(topleft=(0, 0))
+                        info_life_rect = info_life.get_rect(topleft=(0, 21))
+                        info_bullet_rect = info_bullet.get_rect(topleft=(0, 42))
+                        info_score_rect = info_score.get_rect(topleft=(0, 63))
 
+                        pygame.draw.line(screen, 'White', (0, 25), (100, 25), 2)
+                    else:
+                        info_player_rect = info_player.get_rect(topright=(WIDTH, 0))
+                        info_life_rect = info_life.get_rect(topright=(WIDTH, 21))
+                        info_bullet_rect = info_bullet.get_rect(topright=(WIDTH, 42))
+                        info_score_rect = info_score.get_rect(topright=(WIDTH, 63))
+
+                        pygame.draw.line(screen, 'White', (700, 25), (800, 25), 2)
+
+                    screen.blit(info_player, info_player_rect)
                     screen.blit(info_life, info_life_rect)
-                    screen.blit(info_score, info_score_rect)
                     screen.blit(info_bullet, info_bullet_rect)
-                    temp += WIDTH - 100
+                    screen.blit(info_score, info_score_rect)
 
         # Переключение сцены
         else:
@@ -944,12 +954,6 @@ while running:
                 pygame.mixer.music.play(-1)
 
                 print(PLAYER_LIST)
-                # for pl in PLAYER_LIST:
-                #     pl.infinite_bullet = False
-                #     pl.lives = LIVES
-                #     pl.bullet = AMOUNT_BULLET
-                #     pl.bullets_in_game.clear()
-                #     pl.score = 0
                 ctrl_player = []
                 player_count = 0
                 for pl in PLAYER_LIST:
