@@ -156,6 +156,8 @@ class Button(pygame.sprite.Sprite):
     def draw(self, surf):
         surf.blit(self.image, self.rect)
         surf.blit(self.text, self.text_rect)
+        # Рект кнопки
+        # pygame.draw.rect(surf, 'Red', self.rect, 2)
 
 
 # класс Босса
@@ -383,10 +385,10 @@ def scene_main_menu():
 
     screen.blit(text_caption, text_caption_rect)
 
-    btn_play_plot = Button('img/button1.png', 'img/button2.png', 'Сюжет', WIDTH // 2 - 100, HEIGHT // 2, (200, 100))
+    btn_play_plot = Button('img/button1.png', 'img/button2.png', 'Сюжет', WIDTH // 2 - 100, HEIGHT // 2, (200, 80))
     btn_play_endless = Button('img/button1.png', 'img/button2.png', 'Бесконечный', WIDTH // 2 - 100,
-                                                                                   HEIGHT // 2 + 80, (200, 100))
-    btn_exit = Button('img/button1.png', 'img/button2.png', 'Выход', WIDTH // 2 - 100, HEIGHT // 2 + 160, (200, 100))
+                                                                                   HEIGHT // 2 + 80, (200, 80))
+    btn_exit = Button('img/button1.png', 'img/button2.png', 'Выход', WIDTH // 2 - 100, HEIGHT // 2 + 160, (200, 80))
 
     btn_play_plot.update(screen)
     btn_play_endless.update(screen)
@@ -429,8 +431,8 @@ def scene_sel_number_of_player():
     text_choose_number_rect = text_chose_number.get_rect(center=(WIDTH // 2, 200))
     screen.blit(text_chose_number, text_choose_number_rect)
 
-    btn_one = Button('img/button1.png', 'img/button2.png', '1 игрок', 10, 150, (WIDTH // 2 - 20, 500))
-    btn_two = Button('img/button1.png', 'img/button2.png', '2 игрока', WIDTH // 2 + 10, 150, (WIDTH // 2 - 20, 500))
+    btn_one = Button('img/button1.png', 'img/button2.png', '1 игрок', 10, 150, (WIDTH // 2 - 20, 400))
+    btn_two = Button('img/button1.png', 'img/button2.png', '2 игрока', WIDTH // 2 + 10, 150, (WIDTH // 2 - 20, 400))
 
     btn_one.update(screen)
     btn_two.update(screen)
@@ -460,9 +462,9 @@ def scene_sel_ctrl_type():
     text_choose_type_movement = info_text.render('Выберите тип управления: ', True, 'White')
     text_choose_type_movement_rect = text_choose_type_movement.get_rect(center=(WIDTH // 2, 200))
 
-    btn_mouse = Button('img/button1.png', 'img/button2.png', 'Мышка', 10, HEIGHT // 2, (250, 200))
-    btn_ad = Button('img/button1.png', 'img/button2.png', 'Клавиши AD', WIDTH // 2 - 125, HEIGHT // 2, (250, 200))
-    btn_arrow = Button('img/button1.png', 'img/button2.png', 'Стрелки', WIDTH - 260, HEIGHT // 2, (250, 200))
+    btn_mouse = Button('img/button1.png', 'img/button2.png', 'Мышка', 10, HEIGHT // 2, (250, 150))
+    btn_ad = Button('img/button1.png', 'img/button2.png', 'Клавиши AD', WIDTH // 2 - 125, HEIGHT // 2, (250, 150))
+    btn_arrow = Button('img/button1.png', 'img/button2.png', 'Стрелки', WIDTH - 260, HEIGHT // 2, (250, 150))
 
     old_type_control = None
     if player_count == 1:
@@ -533,6 +535,9 @@ def scene_pause():
         boss.draw(screen)
 
     pygame.mixer.music.pause()
+
+    # Установка видимого курсора
+    pygame.mouse.set_visible(True)
 
     # Полупрозрачный прямоугольник
     alpha = pygame.Surface((WIDTH - 50, HEIGHT - 50))
@@ -629,8 +634,9 @@ sound_buff_bullet = pygame.mixer.Sound('music/sound_buff_bullet.mp3')
 sound_buff_bullet.set_volume(0.5)
 sound_buff_heart = pygame.mixer.Sound('music/sound_buff_heart.mp3')
 sound_buff_heart.set_volume(0.5)
-pygame.mixer.music.load('music/background.ogg')
+pygame.mixer.music.load('music/main_menu.mp3')
 pygame.mixer.music.set_volume(0.2)
+pygame.mixer.music.play(-1)
 is_sound_on = True
 
 # Настройка текста
@@ -688,7 +694,7 @@ while running:
             else:
                 pygame.mixer.music.set_volume(0.2)
 
-            # Создание перемешанного списка ради разрешения конфликтных ситуаций в мульитплеере
+            # Создание перемешанного списка ради разрешения конфликтных ситуаций в мультиплеере
             temp_player_list = PLAYER_LIST.copy()
             random.shuffle(temp_player_list)
 
@@ -699,12 +705,12 @@ while running:
                 if event.type == pygame.QUIT:
                     running = False
 
-                # Пауза
+                # Пауза по нажатию кнопки
                 if event.type == pygame.KEYUP and event.key == pygame.K_ESCAPE:
                     pause = True
                     break
 
-                # Пауза когда экран не в фокусе
+                # Пауза, когда экран не в фокусе
                 if event.type == pygame.ACTIVEEVENT:
                     if event.state == 2:
                         pause = True
@@ -758,6 +764,8 @@ while running:
 
             # Не пауза
             else:
+                # Невидимость курсора
+                pygame.mouse.set_visible(False)
                 # Отрисовка и столкновения баффов (в класс?)
                 if buffs_in_game:
                     for entity in list(buffs_in_game):
@@ -926,6 +934,9 @@ while running:
 
         pygame.mixer.music.stop()
 
+        # Установка видимого курсора
+        pygame.mouse.set_visible(True)
+
         if not record:
             file_record = open('high_record.txt', 'r')
             try:
@@ -1008,8 +1019,8 @@ while running:
                     player_count += 1
 
             elif btn_main_menu.is_click(event):
+                pygame.mixer.music.load('music/main_menu.mp3')
                 stage = 0
-
 
             elif btn_exit.is_click(event):
                 running = False
