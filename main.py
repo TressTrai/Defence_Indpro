@@ -385,10 +385,14 @@ def scene_main_menu():
 
     screen.blit(text_caption, text_caption_rect)
 
-    btn_play_plot = Button('img/button1.png', 'img/button2.png', 'Сюжет', WIDTH // 2 - 100, HEIGHT // 2, (200, 80))
-    btn_play_endless = Button('img/button1.png', 'img/button2.png', 'Бесконечный', WIDTH // 2 - 100,
-                                                                                   HEIGHT // 2 + 80, (200, 80))
-    btn_exit = Button('img/button1.png', 'img/button2.png', 'Выход', WIDTH // 2 - 100, HEIGHT // 2 + 160, (200, 80))
+    btn_sizes = (WIDTH//5, WIDTH//15)
+    btn_x = (WIDTH - btn_sizes[0]) // 2
+    btn_y = HEIGHT // 2
+    btn_offset_y = btn_sizes[1] + HEIGHT // 40
+
+    btn_play_plot = Button('img/button1.png', 'img/button2.png', 'Сюжет', btn_x, btn_y + 0 * btn_offset_y, btn_sizes)
+    btn_play_endless = Button('img/button1.png', 'img/button2.png', 'Бесконечный', btn_x, btn_y + 1 * btn_offset_y, btn_sizes)
+    btn_exit = Button('img/button1.png', 'img/button2.png', 'Выход', btn_x, btn_y + 2 * btn_offset_y, btn_sizes)
 
     btn_play_plot.update(screen)
     btn_play_endless.update(screen)
@@ -431,8 +435,13 @@ def scene_sel_number_of_player():
     text_choose_number_rect = text_chose_number.get_rect(center=(WIDTH // 2, 200))
     screen.blit(text_chose_number, text_choose_number_rect)
 
-    btn_one = Button('img/button1.png', 'img/button2.png', '1 игрок', 10, 150, (WIDTH // 2 - 20, 400))
-    btn_two = Button('img/button1.png', 'img/button2.png', '2 игрока', WIDTH // 2 + 10, 150, (WIDTH // 2 - 20, 400))
+    btn_x = WIDTH // 30
+    btn_y = 2 * HEIGHT // 5
+    btn_sizes = (WIDTH // 2 - btn_x, HEIGHT // 3)
+    btn_offset_x = btn_sizes[0] + btn_x
+
+    btn_one = Button('img/button1.png', 'img/button2.png', '1 игрок', btn_x + 0 * btn_offset_x, btn_y, btn_sizes)
+    btn_two = Button('img/button1.png', 'img/button2.png', '2 игрока', btn_x + 1 * btn_offset_x, btn_y, btn_sizes)
 
     btn_one.update(screen)
     btn_two.update(screen)
@@ -462,9 +471,14 @@ def scene_sel_ctrl_type():
     text_choose_type_movement = info_text.render('Выберите тип управления: ', True, 'White')
     text_choose_type_movement_rect = text_choose_type_movement.get_rect(center=(WIDTH // 2, 200))
 
-    btn_mouse = Button('img/button1.png', 'img/button2.png', 'Мышка', 10, HEIGHT // 2, (250, 150))
-    btn_ad = Button('img/button1.png', 'img/button2.png', 'Клавиши AD', WIDTH // 2 - 125, HEIGHT // 2, (250, 150))
-    btn_arrow = Button('img/button1.png', 'img/button2.png', 'Стрелки', WIDTH - 260, HEIGHT // 2, (250, 150))
+    btn_x = WIDTH // 30
+    btn_y = HEIGHT // 2
+    btn_sizes = (WIDTH // 3 - btn_x, HEIGHT // 5)
+    btn_offset_x = btn_sizes[0] + btn_x // 2
+
+    btn_mouse = Button('img/button1.png', 'img/button2.png', 'Мышка', btn_x + 0 * btn_offset_x, btn_y, btn_sizes)
+    btn_ad = Button('img/button1.png', 'img/button2.png', 'Клавиши AD', btn_x + 1 * btn_offset_x, btn_y, btn_sizes)
+    btn_arrow = Button('img/button1.png', 'img/button2.png', 'Стрелки', btn_x + 2 * btn_offset_x, btn_y, btn_sizes)
 
     old_type_control = None
     if player_count == 1:
@@ -640,7 +654,7 @@ pygame.mixer.music.play(-1)
 is_sound_on = True
 
 # Настройка текста
-info_text = pygame.font.Font('fonts/DelaGothicOne-Regular.ttf', 19)
+info_text = pygame.font.Font('fonts/DelaGothicOne-Regular.ttf', HEIGHT//45)
 
 # Вспомогательные переменные, которые возможно нужны
 kind_buff = 0
