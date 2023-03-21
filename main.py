@@ -9,7 +9,7 @@ pygame.init()
 # HEIGHT = 600
 info = pygame.display.Info()
 WIDTH, HEIGHT = (info.current_w, info.current_h)
-is_fullscreen = False
+is_fullscreen = True
 
 FPS = 60
 NAME_GAME = 'Shoot in space'
@@ -19,13 +19,6 @@ TYPE_CONTROL = None
 player_count = None
 number_of_player = None
 
-# Параметры базового врага (0)
-BASIC_ENEMY_SIZE = (50, 50)
-BASIC_ENEMY_SPEED = (4, 6)
-
-# Параметры углового врага (1)
-ANGLE_ENEMY_SIZE = (60, 60)
-ANGLE_ENEMY_SPEED = (4, 5)
 
 # Параметры всех врагов
 ENEMY_COUNT_DIFFICULTY = 30
@@ -93,11 +86,11 @@ class FallingBuff(pygame.sprite.Sprite):
         else:
             self.image = pygame.image.load('img/button1.png').convert_alpha()
 
-        self.image = pygame.transform.scale(self.image, BUFF_SIZE)
-        self.size = BUFF_SIZE
+        self.size = WIDTH // 40, WIDTH // 40
+        self.image = pygame.transform.scale(self.image, self.size)
         self.x = random.randint(0, WIDTH - self.size[0])
         self.y = 0 - self.size[1]
-        self.speed = BUFF_SPEED
+        self.speed = HEIGHT // 200
         self.rect = pygame.Rect((self.x, self.y), self.size)
 
     # Движение баффа
@@ -245,18 +238,18 @@ class Enemy(pygame.sprite.Sprite):
 
         self.kind = kind
 
-        if self.kind == 0:
-            self.size = BASIC_ENEMY_SIZE
-            self.speed = random.randint(BASIC_ENEMY_SPEED[0], BASIC_ENEMY_SPEED[1])
+        if self.kind == 0:  # Базовый враг
+            self.size = (WIDTH // 19, WIDTH // 19)
+            self.speed = random.randint(HEIGHT//150, HEIGHT//100)
 
             self.image = pygame.image.load('img/enemy_basic.png').convert_alpha()
             self.image = pygame.transform.smoothscale(self.image, self.size)
 
             self.x = random.randint(0, WIDTH - self.size[0])
             self.y = 0 - self.size[0]
-        else:
-            self.size = ANGLE_ENEMY_SIZE
-            self.speed = random.randint(ANGLE_ENEMY_SPEED[0], ANGLE_ENEMY_SPEED[1])
+        else:  # Угловой враг
+            self.size = (WIDTH // 18, WIDTH // 18)
+            self.speed = random.randint(HEIGHT//150, HEIGHT//120)
             self.speed_x = random.choice([-1, 1]) * random.uniform(3, 10)
 
             self.image = pygame.image.load('img/enemy_angle.png').convert_alpha()
@@ -299,8 +292,8 @@ class Enemy(pygame.sprite.Sprite):
 class Player(pygame.sprite.Sprite):
     def __init__(self, file_name, type_control):
         pygame.sprite.Sprite.__init__(self)
-        self.size = (80, 80)
-        self.speed = 6
+        self.size = (WIDTH // 13, WIDTH // 13)
+        self.speed = WIDTH // 150
 
         # Выбор спавна игроков
         if number_of_player == 2:
@@ -317,7 +310,7 @@ class Player(pygame.sprite.Sprite):
         self.image = pygame.transform.scale(self.image, self.size)
         self.rect = pygame.Rect((self.x + 5, self.y + 5), (self.size[0]-10, self.size[1]-10))
         self.kind = type_control
-        self.lives = 300000
+        self.lives = 3
         self.bullet = AMOUNT_BULLET
         self.score = 0
         self.bullets_in_game = []
@@ -364,8 +357,10 @@ class Player(pygame.sprite.Sprite):
                 flag = True
 
             if flag:
-                bul = Bullet('img/bullet.png', self.x + self.size[0] // 2 - BULLET_SIZE[0] // 2,
-                             self.y + self.size[1] // 2 - BULLET_SIZE[1] // 2, BULLET_SIZE, BULLET_SPEED)
+                bullet_size = WIDTH // 90, WIDTH // 90
+                bullet_speed = HEIGHT // 120
+                bul = Bullet('img/bullet.png', self.x + self.size[0] // 2 - bullet_size[0] // 2,
+                             self.y + self.size[1] // 2 - bullet_size[1] // 2, bullet_size, bullet_speed)
                 self.bullets_in_game.append(bul)
                 sound_shoot.play()
 
@@ -380,12 +375,19 @@ def scene_main_menu():
     global plot
     global is_sound_on
 
+    if is_fullscreen:
+        btn_fullscreen = Button('img/buff_heart.png', 'img/buff_heart.png', '', WIDTH - 50, 0, (50, 50))
+    else:
+        btn_fullscreen = Button('img/buff_bullet.png', 'img/buff_bullet.png', '', WIDTH - 50, 0, (50, 50))
+
+    btn_fullscreen.draw(screen)
+
     text_caption = info_text.render(NAME_GAME, True, 'White')
     text_caption_rect = text_caption.get_rect(center=(WIDTH // 2, 200))
 
     screen.blit(text_caption, text_caption_rect)
 
-    btn_sizes = (WIDTH//5, WIDTH//15)
+    btn_sizes = (WIDTH//5, HEIGHT//10)
     btn_x = (WIDTH - btn_sizes[0]) // 2
     btn_y = HEIGHT // 2
     btn_offset_y = btn_sizes[1] + HEIGHT // 40
@@ -422,6 +424,9 @@ def scene_main_menu():
         if btn_play_plot.is_click(event):
             plot = True
 
+        if btn_fullscreen.is_click(event):
+            toggle_fullscreen()
+
         elif btn_exit.is_click(event):
             running = False
 
@@ -432,16 +437,18 @@ def scene_sel_number_of_player():
     global number_of_player
 
     text_chose_number = info_text.render('Сколько игроков?', True, 'White')
-    text_choose_number_rect = text_chose_number.get_rect(center=(WIDTH // 2, 200))
+    text_choose_number_rect = text_chose_number.get_rect(center=(WIDTH // 2, HEIGHT // 3))
     screen.blit(text_chose_number, text_choose_number_rect)
 
     btn_x = WIDTH // 30
-    btn_y = 2 * HEIGHT // 5
-    btn_sizes = (WIDTH // 2 - btn_x, HEIGHT // 3)
-    btn_offset_x = btn_sizes[0] + btn_x
+    btn_y = HEIGHT // 2
+    btn_sizes = (WIDTH // 2 - 2 * btn_x, HEIGHT // 3)
+    btn_offset_x = btn_sizes[0] + 2 * btn_x
 
     btn_one = Button('img/button1.png', 'img/button2.png', '1 игрок', btn_x + 0 * btn_offset_x, btn_y, btn_sizes)
     btn_two = Button('img/button1.png', 'img/button2.png', '2 игрока', btn_x + 1 * btn_offset_x, btn_y, btn_sizes)
+
+    # print(btn_x, WIDTH - (btn_x + 1 * btn_offset_x + btn_sizes[0]))
 
     btn_one.update(screen)
     btn_two.update(screen)
@@ -466,19 +473,21 @@ def scene_sel_ctrl_type():
     global number_of_player
 
     text_player = info_text.render(str(player_count + 1) + ' игрок', True, 'White')
-    text_player_rect = text_player.get_rect(center=(WIDTH//2, 150))
+    text_player_rect = text_player.get_rect(center=(WIDTH//2, HEIGHT // 3 - heigth_font))
 
     text_choose_type_movement = info_text.render('Выберите тип управления: ', True, 'White')
-    text_choose_type_movement_rect = text_choose_type_movement.get_rect(center=(WIDTH // 2, 200))
+    text_choose_type_movement_rect = text_choose_type_movement.get_rect(center=(WIDTH // 2, HEIGHT // 3))
 
     btn_x = WIDTH // 30
     btn_y = HEIGHT // 2
-    btn_sizes = (WIDTH // 3 - btn_x, HEIGHT // 5)
+    btn_sizes = (WIDTH // 3 - btn_x, HEIGHT // 3)
     btn_offset_x = btn_sizes[0] + btn_x // 2
 
     btn_mouse = Button('img/button1.png', 'img/button2.png', 'Мышка', btn_x + 0 * btn_offset_x, btn_y, btn_sizes)
     btn_ad = Button('img/button1.png', 'img/button2.png', 'Клавиши AD', btn_x + 1 * btn_offset_x, btn_y, btn_sizes)
     btn_arrow = Button('img/button1.png', 'img/button2.png', 'Стрелки', btn_x + 2 * btn_offset_x, btn_y, btn_sizes)
+
+    # print(btn_x, WIDTH - (btn_x + 2 * btn_offset_x + btn_sizes[0]))
 
     old_type_control = None
     if player_count == 1:
@@ -562,23 +571,25 @@ def scene_pause():
 
     # Звук
     if is_sound_on:
-        btn_volume = Button('img/sound_on.png', 'img/sound_on.png', '', 0, 0, (50, 50))
+        btn_volume = Button('img/sound_on.png', 'img/sound_on.png', '', WIDTH // 60, HEIGHT // 60, (WIDTH // 30, WIDTH // 30))
     else:
-        btn_volume = Button('img/sound_off.png', 'img/sound_off.png', '', 0, 0, (50, 50))
+        btn_volume = Button('img/sound_off.png', 'img/sound_off.png', '', WIDTH // 60, HEIGHT // 60, (WIDTH // 30, WIDTH // 30))
 
     btn_volume.draw(screen)
 
     text_pause = info_text.render('Пауза', True, 'White')
-    text_pause_rect = text_pause.get_rect(center=(WIDTH // 2, HEIGHT // 2))
+    text_pause_rect = text_pause.get_rect(center=(WIDTH // 2, HEIGHT // 3))
 
     screen.blit(text_pause, text_pause_rect)
 
-    btn_continue = Button('img/button1.png', 'img/button2.png', 'Продолжить', WIDTH // 2 - 100, HEIGHT // 2 + 25,
-                          (200, 75))
-    btn_main_menu = Button('img/button1.png', 'img/button2.png', 'Главное меню', WIDTH // 2 - 100, HEIGHT // 2 + 100,
-                           (200, 75))
-    btn_exit = Button('img/button1.png', 'img/button2.png', 'Выход', WIDTH // 2 - 100, HEIGHT // 2 + 200,
-                      (200, 75))
+    btn_sizes = (WIDTH // 5, HEIGHT // 10)
+    btn_x = (WIDTH - btn_sizes[0]) // 2
+    btn_y = HEIGHT // 2
+    btn_offset_y = btn_sizes[1] + HEIGHT // 40
+
+    btn_continue = Button('img/button1.png', 'img/button2.png', 'Продолжить', btn_x, btn_y + 0 * btn_offset_y, btn_sizes)
+    btn_main_menu = Button('img/button1.png', 'img/button2.png', 'Главное меню', btn_x, btn_y + 1 * btn_offset_y, btn_sizes)
+    btn_exit = Button('img/button1.png', 'img/button2.png', 'Выход', btn_x, btn_y + 2 * btn_offset_y, btn_sizes)
 
     btn_continue.update(screen)
     btn_main_menu.update(screen)
@@ -596,10 +607,7 @@ def scene_pause():
         elif btn_main_menu.is_click(event):
             stage = 0
         elif btn_volume.is_click(event):
-            if is_sound_on:
-                toggle_sound()
-            else:
-                toggle_sound()
+            toggle_sound()
 
 # -----------------------------
 
@@ -619,6 +627,29 @@ def toggle_sound():
         is_sound_on = False
     else:
         is_sound_on = True
+
+
+def toggle_fullscreen():
+    global is_fullscreen, WIDTH, HEIGHT
+    global screen
+    global heigth_font, info_text, info_text_underline
+    global background
+
+    if is_fullscreen:
+        WIDTH, HEIGHT = (800, 600)
+        screen = pygame.display.set_mode((WIDTH, HEIGHT))
+        is_fullscreen = False
+    else:
+        WIDTH, HEIGHT = (info.current_w, info.current_h)
+        screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.FULLSCREEN)
+        is_fullscreen = True
+
+    heigth_font = HEIGHT // 35
+    info_text = pygame.font.Font('fonts/DelaGothicOne-Regular.ttf', heigth_font)
+    info_text_underline = pygame.font.Font('fonts/DelaGothicOne-Regular.ttf', heigth_font)
+    info_text_underline.set_underline(True)
+
+    background = pygame.transform.scale(background, (WIDTH, 1800))
 
 # -----------------------------
 
@@ -654,7 +685,10 @@ pygame.mixer.music.play(-1)
 is_sound_on = True
 
 # Настройка текста
-info_text = pygame.font.Font('fonts/DelaGothicOne-Regular.ttf', HEIGHT//45)
+heigth_font = HEIGHT//35
+info_text = pygame.font.Font('fonts/DelaGothicOne-Regular.ttf', heigth_font)
+info_text_underline = pygame.font.Font('fonts/DelaGothicOne-Regular.ttf', heigth_font)
+info_text_underline.set_underline(True)
 
 # Вспомогательные переменные, которые возможно нужны
 kind_buff = 0
@@ -894,7 +928,7 @@ while running:
 
                 # Надписи на экране
                 for (i, pl) in enumerate(PLAYER_LIST):  # Чтоб не было мерцания берем упорядоченный список
-                    info_player = info_text.render(str(i + 1) + ' игрок', True, 'White')
+                    info_player = info_text_underline.render(str(i + 1) + ' игрок', True, 'White')
                     if pl.lives > 0:
                         info_life = info_text.render('Жизни: ' + str(pl.lives), True, 'White')
                         info_score = info_text.render('Очки: ' + str(pl.score), True, 'White')
@@ -903,9 +937,9 @@ while running:
                             seconds = (pygame.time.get_ticks()-pl.time)/1000
                             info_timer_infinity = info_text.render('00:0' + str(round(10-seconds)-1), True, 'Red')
                             if i == 0:
-                                info_timer_infinity_rect = info_timer_infinity.get_rect(topleft=(0, 84))
+                                info_timer_infinity_rect = info_timer_infinity.get_rect(topleft=(0, 4 * heigth_font))
                             else:
-                                info_timer_infinity_rect = info_timer_infinity.get_rect(topright=(WIDTH, 84))
+                                info_timer_infinity_rect = info_timer_infinity.get_rect(topright=(WIDTH, 4 * heigth_font))
                             screen.blit(info_timer_infinity, info_timer_infinity_rect)
                             if seconds >= 9:
                                 pl.infinite_bullet = False
@@ -920,19 +954,19 @@ while running:
                         info_bullet = info_text.render('Пули: 0', True, 'White')
 
                     if i == 0:
-                        info_player_rect = info_player.get_rect(topleft=(0, 0))
-                        info_life_rect = info_life.get_rect(topleft=(0, 21))
-                        info_bullet_rect = info_bullet.get_rect(topleft=(0, 42))
-                        info_score_rect = info_score.get_rect(topleft=(0, 63))
+                        info_player_rect = info_player.get_rect(topleft=(0, 0 * heigth_font))
+                        info_life_rect = info_life.get_rect(topleft=(0, 1 * heigth_font))
+                        info_bullet_rect = info_bullet.get_rect(topleft=(0, 2 * heigth_font))
+                        info_score_rect = info_score.get_rect(topleft=(0, 3 * heigth_font))
 
-                        pygame.draw.line(screen, 'White', (0, 25), (100, 25), 2)
+                        # pygame.draw.line(screen, 'White', (0, heigth_font + 5), (100, heigth_font + 5), HEIGHT // 250)
                     else:
-                        info_player_rect = info_player.get_rect(topright=(WIDTH, 0))
-                        info_life_rect = info_life.get_rect(topright=(WIDTH, 21))
-                        info_bullet_rect = info_bullet.get_rect(topright=(WIDTH, 42))
-                        info_score_rect = info_score.get_rect(topright=(WIDTH, 63))
+                        info_player_rect = info_player.get_rect(topright=(WIDTH, 0 * heigth_font))
+                        info_life_rect = info_life.get_rect(topright=(WIDTH, 1 * heigth_font))
+                        info_bullet_rect = info_bullet.get_rect(topright=(WIDTH, 2 * heigth_font))
+                        info_score_rect = info_score.get_rect(topright=(WIDTH, 3 * heigth_font))
 
-                        pygame.draw.line(screen, 'White', (WIDTH-100, 25), (WIDTH, 25), 2)
+                        # pygame.draw.line(screen, 'White', (WIDTH-100, heigth_font + 5), (WIDTH, heigth_font + 5), HEIGHT // 250)
 
                     screen.blit(info_player, info_player_rect)
                     screen.blit(info_life, info_life_rect)
@@ -989,17 +1023,22 @@ while running:
         screen.blit(text_record, (0, 24))
 
         text_death = info_text.render('Потрачено', True, 'White')
-        text_death_rect = text_death.get_rect(center=(WIDTH//2, HEIGHT//2))
+        text_death_rect = text_death.get_rect(center=(WIDTH//2, 2 * HEIGHT//3))
 
         screen.blit(text_death, text_death_rect)
 
-        btn_retry = Button('img/button1.png', 'img/button2.png', 'Заново', WIDTH//2-90, HEIGHT//2+25, (180, 75))
+        btn_sizes = (WIDTH // 5, HEIGHT // 10)
+        btn_x = (WIDTH - btn_sizes[0]) // 2
+        btn_y = HEIGHT // 2
+        btn_offset_y = btn_sizes[1] + HEIGHT // 40
+
+        btn_retry = Button('img/button1.png', 'img/button2.png', 'Заново', btn_x, btn_y + 0 * btn_offset_y, btn_sizes)
         btn_retry.update(screen)
 
-        btn_main_menu = Button('img/button1.png', 'img/button2.png', 'Главное меню', WIDTH//2-90, HEIGHT//2+90, (180, 75))
+        btn_main_menu = Button('img/button1.png', 'img/button2.png', 'Главное меню', btn_x, btn_y + 1 * btn_offset_y, btn_sizes)
         btn_main_menu.update(screen)
 
-        btn_exit = Button('img/button1.png', 'img/button2.png', 'Выход', WIDTH//2-90, HEIGHT//2+155, (180, 75))
+        btn_exit = Button('img/button1.png', 'img/button2.png', 'Выход', btn_x, btn_y + 2 * btn_offset_y, btn_sizes)
         btn_exit.update(screen)
 
         for event in pygame.event.get():
