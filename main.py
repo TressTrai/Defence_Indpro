@@ -1,25 +1,23 @@
 import pygame
 import random
 
-
 # Инициализация
 pygame.init()
 
 # Параметры экрана
-WIDTH = 800
-HEIGHT = 600
+# WIDTH = 800
+# HEIGHT = 600
+info = pygame.display.Info()
+WIDTH, HEIGHT = (info.current_w, info.current_h)
+is_fullscreen = False
+
 FPS = 60
 NAME_GAME = 'Shoot in space'
 
 # Параметры игрока
-PLAYER_SIZE = (80, 80)
-PLAYER_SPEED = 6
-PLAYER_X, PLAYER_Y = (WIDTH - PLAYER_SIZE[0]) // 2, HEIGHT - PLAYER_SIZE[1]
-LIVES = 3
-SCORE = 0
-TYPE_CONTROL = -1
-player_count = 0
-number_of_player = 0
+TYPE_CONTROL = None
+player_count = None
+number_of_player = None
 
 # Параметры базового врага (0)
 BASIC_ENEMY_SIZE = (50, 50)
@@ -30,7 +28,7 @@ ANGLE_ENEMY_SIZE = (60, 60)
 ANGLE_ENEMY_SPEED = (4, 5)
 
 # Параметры всех врагов
-ENEMY_COUNT_DIFFICULTY = 15
+ENEMY_COUNT_DIFFICULTY = 30
 ENEMY_APPEAR_SPEED = (1500, 3000)  # чем меньше числа, тем быстрее появляется враг (1500, 3000)
 BOSS_IN_GAME = False
 BOSS_HEALTH = 584
@@ -299,26 +297,25 @@ class Enemy(pygame.sprite.Sprite):
 class Player(pygame.sprite.Sprite):
     def __init__(self, file_name, type_control):
         pygame.sprite.Sprite.__init__(self)
-        self.size = PLAYER_SIZE
-        self.speed = PLAYER_SPEED
+        self.size = (80, 80)
+        self.speed = 6
 
         # Выбор спавна игроков
         if number_of_player == 2:
             if player_count == 0:
-                self.x = PLAYER_X // 2
-                self.y = PLAYER_Y
+                self.x = (WIDTH - self.size[0]) // 4
             else:
-                self.x = 3 * PLAYER_X // 2
-                self.y = PLAYER_Y
+                self.x = 3 * (WIDTH - self.size[0]) // 4
         else:
-            self.x = PLAYER_X
-            self.y = PLAYER_Y
+            self.x = (WIDTH - self.size[0]) // 2
+
+        self.y = HEIGHT - self.size[1]
 
         self.image = pygame.image.load(file_name).convert_alpha()
         self.image = pygame.transform.scale(self.image, self.size)
         self.rect = pygame.Rect((self.x + 5, self.y + 5), (self.size[0]-10, self.size[1]-10))
         self.kind = type_control
-        self.lives = LIVES
+        self.lives = 300000
         self.bullet = AMOUNT_BULLET
         self.score = 0
         self.bullets_in_game = []
@@ -373,25 +370,52 @@ class Player(pygame.sprite.Sprite):
 
 # --------- Сцены ------------
 def scene_main_menu():
-    global running
+    global running, pause
     global stage
+    global number_of_player, player_count, TYPE_CONTROL, PLAYER_LIST
+    global boss, BOSS_IN_GAME
+    global enemy_in_game, boss_bullets_in_game, buffs_in_game
+    global plot
+    global is_sound_on
 
     text_caption = info_text.render(NAME_GAME, True, 'White')
     text_caption_rect = text_caption.get_rect(center=(WIDTH // 2, 200))
 
     screen.blit(text_caption, text_caption_rect)
 
-    btn_play = Button('img/button1.png', 'img/button2.png', 'Играть', WIDTH // 2 - 75, HEIGHT // 2, (150, 100))
-    btn_exit = Button('img/button1.png', 'img/button2.png', 'Выход', WIDTH // 2 - 75, HEIGHT // 2 + 100, (150, 100))
+    btn_play_plot = Button('img/button1.png', 'img/button2.png', 'Сюжет', WIDTH // 2 - 100, HEIGHT // 2, (200, 100))
+    btn_play_endless = Button('img/button1.png', 'img/button2.png', 'Бесконечный', WIDTH // 2 - 100,
+                                                                                   HEIGHT // 2 + 80, (200, 100))
+    btn_exit = Button('img/button1.png', 'img/button2.png', 'Выход', WIDTH // 2 - 100, HEIGHT // 2 + 160, (200, 100))
 
-    btn_play.update(screen)
+    btn_play_plot.update(screen)
+    btn_play_endless.update(screen)
     btn_exit.update(screen)
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
-        if btn_play.is_click(event):
+        if btn_play_plot.is_click(event) or btn_play_endless.is_click(event):
             stage += 1
+            pause = False
+            TYPE_CONTROL = -1
+            player_count = 0
+            number_of_player = 0
+            PLAYER_LIST.clear()
+
+            boss = None
+            BOSS_IN_GAME = False
+
+            enemy_in_game.clear()
+            boss_bullets_in_game.clear()
+            buffs_in_game.clear()
+
+            pygame.mixer.music.load('music/background.ogg')
+            pygame.mixer.music.set_volume(0.2)
+            is_sound_on = True
+        if btn_play_plot.is_click(event):
+            plot = True
+
         elif btn_exit.is_click(event):
             running = False
 
@@ -483,6 +507,7 @@ def scene_sel_ctrl_type():
 
 def scene_pause():
     global running
+    global stage
     global pause
 
     # Все возможные отрисовки
@@ -509,12 +534,14 @@ def scene_pause():
 
     pygame.mixer.music.pause()
 
+    # Полупрозрачный прямоугольник
     alpha = pygame.Surface((WIDTH - 50, HEIGHT - 50))
     alpha.set_alpha(64)
     alpha.fill((255, 255, 255))
     alpha_rect = alpha.get_rect(center=(WIDTH // 2, HEIGHT // 2))
     screen.blit(alpha, alpha_rect)
 
+    # Звук
     if is_sound_on:
         btn_volume = Button('img/sound_on.png', 'img/sound_on.png', '', 0, 0, (50, 50))
     else:
@@ -529,13 +556,14 @@ def scene_pause():
 
     btn_continue = Button('img/button1.png', 'img/button2.png', 'Продолжить', WIDTH // 2 - 100, HEIGHT // 2 + 25,
                           (200, 75))
-    btn_exit = Button('img/button1.png', 'img/button2.png', 'Выход', WIDTH // 2 - 100, HEIGHT // 2 + 100,
+    btn_main_menu = Button('img/button1.png', 'img/button2.png', 'Главное меню', WIDTH // 2 - 100, HEIGHT // 2 + 100,
+                           (200, 75))
+    btn_exit = Button('img/button1.png', 'img/button2.png', 'Выход', WIDTH // 2 - 100, HEIGHT // 2 + 200,
                       (200, 75))
 
     btn_continue.update(screen)
+    btn_main_menu.update(screen)
     btn_exit.update(screen)
-    btn_continue.draw(screen)
-    btn_exit.draw(screen)
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -546,6 +574,8 @@ def scene_pause():
             pause = False
         elif btn_exit.is_click(event):
             running = False
+        elif btn_main_menu.is_click(event):
+            stage = 0
         elif btn_volume.is_click(event):
             if is_sound_on:
                 toggle_sound()
@@ -575,7 +605,8 @@ def toggle_sound():
 
 
 # Настройка игры
-screen = pygame.display.set_mode((WIDTH, HEIGHT))
+# screen = pygame.display.set_mode((WIDTH, HEIGHT))
+screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.FULLSCREEN)
 pygame.display.set_caption(NAME_GAME)
 
 # Настройка часов
@@ -609,12 +640,14 @@ info_text = pygame.font.Font('fonts/DelaGothicOne-Regular.ttf', 19)
 kind_buff = 0
 record = None
 pause = False
+plot = False
 boss = None
 
 # Счетчик сцен (0 - Главное меню; 1 - Выбор количества игроков; 2 - Выбор управления; 3 - Игровое поле; 4 - Проигрыш)
 stage = 0
 
 background = pygame.image.load('img/background.png').convert()
+background = pygame.transform.scale(background, (WIDTH, 1800))
 background_pos = 0
 
 # Основной цикл игры
@@ -689,10 +722,14 @@ while running:
                         if pl.score >= max_score:
                             max_score = pl.score
                     if ENEMY_APPEAR_SPEED[0] - 20 * max_score <= 0:
-                        if not BOSS_IN_GAME:
-                            BOSS_IN_GAME = True
-                            pygame.mixer.music.load('music/boss_theme.mp3')
-                            pygame.mixer.music.play(-1)
+                        if plot:
+                            if not BOSS_IN_GAME:
+                                BOSS_IN_GAME = True
+                                pygame.mixer.music.load('music/boss_theme.mp3')
+                                pygame.mixer.music.play(-1)
+                        else:
+                            pygame.time.set_timer(enemy_timer, random.randint(1, 750))
+                            print(len(enemy_in_game))
 
                     else:
                         pygame.time.set_timer(enemy_timer, random.randint(ENEMY_APPEAR_SPEED[0]-20*max_score,
@@ -774,7 +811,10 @@ while running:
                                         if entity in enemy_in_game:
                                             enemy_in_game.remove(entity)
                                             pl.bullets_in_game.remove(bullet)
-                                            pl.score += 5
+                                            if entity.kind == 0:
+                                                pl.score += 1
+                                            else:
+                                                pl.score += 5
                                             sound_death_enemy.play()
 
                                         # Спавн Баффов
@@ -843,7 +883,7 @@ while running:
                             if i == 0:
                                 info_timer_infinity_rect = info_timer_infinity.get_rect(topleft=(0, 84))
                             else:
-                                info_timer_infinity_rect = info_timer_infinity.get_rect(topright=(WIDTH, 63))
+                                info_timer_infinity_rect = info_timer_infinity.get_rect(topright=(WIDTH, 84))
                             screen.blit(info_timer_infinity, info_timer_infinity_rect)
                             if seconds >= 9:
                                 pl.infinite_bullet = False
@@ -870,7 +910,7 @@ while running:
                         info_bullet_rect = info_bullet.get_rect(topright=(WIDTH, 42))
                         info_score_rect = info_score.get_rect(topright=(WIDTH, 63))
 
-                        pygame.draw.line(screen, 'White', (700, 25), (800, 25), 2)
+                        pygame.draw.line(screen, 'White', (WIDTH-100, 25), (WIDTH, 25), 2)
 
                     screen.blit(info_player, info_player_rect)
                     screen.blit(info_life, info_life_rect)
@@ -928,10 +968,13 @@ while running:
 
         screen.blit(text_death, text_death_rect)
 
-        btn_retry = Button('img/button1.png', 'img/button2.png', 'Заново', WIDTH//2-70, HEIGHT//2+25, (140, 75))
+        btn_retry = Button('img/button1.png', 'img/button2.png', 'Заново', WIDTH//2-90, HEIGHT//2+25, (180, 75))
         btn_retry.update(screen)
 
-        btn_exit = Button('img/button1.png', 'img/button2.png', 'Выход', WIDTH//2-70, HEIGHT//2+90, (140, 75))
+        btn_main_menu = Button('img/button1.png', 'img/button2.png', 'Главное меню', WIDTH//2-90, HEIGHT//2+90, (180, 75))
+        btn_main_menu.update(screen)
+
+        btn_exit = Button('img/button1.png', 'img/button2.png', 'Выход', WIDTH//2-90, HEIGHT//2+155, (180, 75))
         btn_exit.update(screen)
 
         for event in pygame.event.get():
@@ -963,6 +1006,10 @@ while running:
                     player = Player('img/player_'+str(pl+1)+'.png', ctrl_player[pl])
                     PLAYER_LIST.append(player)
                     player_count += 1
+
+            elif btn_main_menu.is_click(event):
+                stage = 0
+
 
             elif btn_exit.is_click(event):
                 running = False
