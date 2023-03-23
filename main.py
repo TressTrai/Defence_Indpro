@@ -25,6 +25,7 @@ ENEMY_COUNT_DIFFICULTY = 30
 ENEMY_APPEAR_SPEED = (1500, 3000)  # чем меньше числа, тем быстрее появляется враг (1500, 3000)
 BOSS_IN_GAME = False
 BOSS_HEALTH = 584
+win = False
 
 # Параметры пуль
 BULLET_SIZE = (10, 10)
@@ -310,7 +311,7 @@ class Player(pygame.sprite.Sprite):
         self.image = pygame.transform.scale(self.image, self.size)
         self.rect = pygame.Rect((self.x + 5, self.y + 5), (self.size[0]-10, self.size[1]-10))
         self.kind = type_control
-        self.lives = 3
+        self.lives = 300000
         self.bullet = AMOUNT_BULLET
         self.score = 0
         self.bullets_in_game = []
@@ -374,6 +375,7 @@ def scene_main_menu():
     global enemy_in_game, boss_bullets_in_game, buffs_in_game
     global plot
     global is_sound_on
+    global screen, WIDTH, HEIGHT
 
     if is_fullscreen:
         btn_fullscreen = Button('img/buff_heart.png', 'img/buff_heart.png', '', WIDTH - 50, 0, (50, 50))
@@ -421,20 +423,29 @@ def scene_main_menu():
             pygame.mixer.music.load('music/background.ogg')
             pygame.mixer.music.set_volume(0.2)
             is_sound_on = True
+
         if btn_play_plot.is_click(event):
             plot = True
+        if btn_play_endless.is_click(event):
+            plot = False
 
-        if btn_fullscreen.is_click(event):
+        if btn_fullscreen.is_click(event) or (event.type == pygame.KEYUP and event.key == pygame.K_F11):
             toggle_fullscreen()
 
         elif btn_exit.is_click(event):
             running = False
+
+        elif event.type == pygame.VIDEORESIZE and not is_fullscreen:
+            WIDTH = event.w
+            HEIGHT = event.h
+            screen = pygame.display.set_mode((event.w, event.h), pygame.RESIZABLE)
 
 
 def scene_sel_number_of_player():
     global running
     global stage
     global number_of_player
+    global screen, WIDTH, HEIGHT
 
     text_chose_number = info_text.render('Сколько игроков?', True, 'White')
     text_choose_number_rect = text_chose_number.get_rect(center=(WIDTH // 2, HEIGHT // 3))
@@ -464,13 +475,16 @@ def scene_sel_number_of_player():
             number_of_player = 2
             stage += 1
 
+        elif event.type == pygame.VIDEORESIZE and not is_fullscreen:
+            WIDTH = event.w
+            HEIGHT = event.h
+            screen = pygame.display.set_mode((event.w, event.h), pygame.RESIZABLE)
+
 
 def scene_sel_ctrl_type():
-    global running
-    global player_count
-    global stage
-    global TYPE_CONTROL
-    global number_of_player
+    global running, stage
+    global player_count, TYPE_CONTROL, number_of_player
+    global screen, WIDTH, HEIGHT
 
     text_player = info_text.render(str(player_count + 1) + ' игрок', True, 'White')
     text_player_rect = text_player.get_rect(center=(WIDTH//2, HEIGHT // 3 - heigth_font))
@@ -521,19 +535,53 @@ def scene_sel_ctrl_type():
 
             if player_count == number_of_player:
                 stage += 1
-
-                pygame.mixer.music.play(-1)
-
-                print(PLAYER_LIST)
                 break
             else:
                 TYPE_CONTROL = -1
 
+        elif event.type == pygame.VIDEORESIZE and not is_fullscreen:
+            WIDTH = event.w
+            HEIGHT = event.h
+            screen = pygame.display.set_mode((event.w, event.h), pygame.RESIZABLE)
+
+
+def cut_scene():
+    global stage
+    global running
+    global count_cut
+
+    bg_cut_scene = pygame.image.load('img/cs_' + str(count_cut) + '.png')
+    pygame.transform.scale(bg_cut_scene, (WIDTH, HEIGHT))
+    screen.blit(bg_cut_scene, (0, 0))
+
+    # Полупрозрачный прямоугольник
+    alpha = pygame.Surface((WIDTH - 50, HEIGHT // 5))
+    alpha.set_alpha(64)
+    alpha.fill((255, 255, 255))
+    alpha_rect = alpha.get_rect(midbottom=(WIDTH // 2, HEIGHT - 10))
+    screen.blit(alpha, alpha_rect)
+
+    # Текст катсцены
+    text_cs = info_text.render('Это текст для '+str(count_cut)+' катсцены', True, 'Black')
+    text_cs_rect = text_cs.get_rect(topleft=(50, 4 * HEIGHT // 5))
+    screen.blit(text_cs, text_cs_rect)
+
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+
+        elif event.type == pygame.KEYUP and event.key == pygame.K_SPACE or event.type == pygame.MOUSEBUTTONUP:
+            count_cut += 1
+            if count_cut > 2:
+                stage += 1
+                count_cut = 1
+                pygame.mixer.music.play(-1)
+
 
 def scene_pause():
-    global running
+    global running, pause
     global stage
-    global pause
+    global WIDTH, HEIGHT, screen
 
     # Все возможные отрисовки
     if buffs_in_game:
@@ -608,6 +656,13 @@ def scene_pause():
             stage = 0
         elif btn_volume.is_click(event):
             toggle_sound()
+        elif event.type == pygame.VIDEORESIZE and not is_fullscreen:
+            WIDTH = event.w
+            HEIGHT = event.h
+            screen = pygame.display.set_mode((event.w, event.h), pygame.RESIZABLE)
+            for pl in PLAYER_LIST:
+                pl.size = (WIDTH // 13, WIDTH // 13)
+                pl.y = HEIGHT - pl.size[1]
 
 # -----------------------------
 
@@ -637,7 +692,7 @@ def toggle_fullscreen():
 
     if is_fullscreen:
         WIDTH, HEIGHT = (800, 600)
-        screen = pygame.display.set_mode((WIDTH, HEIGHT))
+        screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.RESIZABLE)
         is_fullscreen = False
     else:
         WIDTH, HEIGHT = (info.current_w, info.current_h)
@@ -696,6 +751,7 @@ record = None
 pause = False
 plot = False
 boss = None
+count_cut = 1
 
 # Счетчик сцен (0 - Главное меню; 1 - Выбор количества игроков; 2 - Выбор управления; 3 - Игровое поле; 4 - Проигрыш)
 stage = 0
@@ -724,11 +780,20 @@ while running:
     elif stage == 2:
         scene_sel_ctrl_type()
 
-    # Игровое поле
-    if stage == 3:
-        if is_game():
+    # Катсцена
+    elif stage == 3:
+        if plot:
+            cut_scene()
+        else:
+            stage += 1
+            pygame.mixer.music.play(-1)
 
+    # Игровое поле
+    if stage == 4:
+        if is_game():
+            # print(clock.get_fps())
             # Динамичный фон
+            background = pygame.transform.scale(background, (WIDTH, 1800))
             screen.blit(background, (0, background_pos))
             screen.blit(background, (0, background_pos - 1800))
             if not pause:
@@ -745,6 +810,10 @@ while running:
             # Создание перемешанного списка ради разрешения конфликтных ситуаций в мультиплеере
             temp_player_list = PLAYER_LIST.copy()
             random.shuffle(temp_player_list)
+            if temp_player_list[0].lives <= 0:
+                temp = temp_player_list[0]
+                temp_player_list[0] = temp_player_list[1]
+                temp_player_list[1] = temp
 
             # Ивенты
             for event in pygame.event.get():
@@ -763,6 +832,14 @@ while running:
                     if event.state == 2:
                         pause = True
                         break
+
+                if event.type == pygame.VIDEORESIZE and not is_fullscreen:
+                    WIDTH = event.w
+                    HEIGHT = event.h
+                    screen = pygame.display.set_mode((event.w, event.h), pygame.RESIZABLE)
+                    for pl in PLAYER_LIST:
+                        pl.size = (WIDTH // 13, WIDTH // 13)
+                        pl.y = HEIGHT - pl.size[1]
 
                 # Спавн врагов (в класс?)
                 if not BOSS_IN_GAME and event.type == enemy_timer and len(enemy_in_game) < ENEMY_COUNT_DIFFICULTY:
@@ -924,6 +1001,7 @@ while running:
 
                     if boss.health <= 0:
                         for pl in temp_player_list:
+                            win = True
                             pl.lives = 0
 
                 # Надписи на экране
@@ -978,7 +1056,7 @@ while running:
             stage += 1
 
     # Экран проигрыша/выигрыша
-    elif stage == 4:
+    elif stage == 5:
 
         pygame.mixer.music.stop()
 
@@ -1022,9 +1100,12 @@ while running:
         text_record = info_text.render('Рекорд: ' + str(record), True, 'White')
         screen.blit(text_record, (0, 24))
 
-        text_death = info_text.render('Потрачено', True, 'White')
-        text_death_rect = text_death.get_rect(center=(WIDTH//2, 2 * HEIGHT//3))
+        if win and plot:
+            text_death = info_text.render('Победюн', True, 'White')
+        else:
+            text_death = info_text.render('Потрачено', True, 'White')
 
+        text_death_rect = text_death.get_rect(center=(WIDTH // 2, 2 * HEIGHT // 3))
         screen.blit(text_death, text_death_rect)
 
         btn_sizes = (WIDTH // 5, HEIGHT // 10)
@@ -1046,7 +1127,7 @@ while running:
                 running = False
 
             if btn_retry.is_click(event):
-                stage = 3
+                stage = 4
                 record = None
 
                 if boss:
