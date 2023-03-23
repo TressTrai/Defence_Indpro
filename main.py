@@ -198,7 +198,7 @@ class BossEvent(pygame.sprite.Sprite):
 
         pygame.draw.rect(surf, 'White', (WIDTH//2 - 300, 32, 600, 50), 6)
         pygame.draw.rect(surf, 'Red', (WIDTH//2 - 300 + 8, 39, self.health, 36))
-        name_boss = info_text.render('Гайя', True, 'White')
+        name_boss = boss_text.render('Гайя', True, 'White')
         name_boss_rect = name_boss.get_rect(center=(WIDTH//2, 20))
         surf.blit(name_boss, name_boss_rect)
 
@@ -257,7 +257,7 @@ class Enemy(pygame.sprite.Sprite):
             self.image = pygame.transform.smoothscale(self.image, self.size)
 
             # Поворот спрайта если в противоположную сторону направлен
-            if self.speed_x < 0:
+            if self.speed_x > 0:
                 self.image = pygame.transform.flip(self.image, True, False)
 
             self.y = 0 - self.size[0]
@@ -311,7 +311,7 @@ class Player(pygame.sprite.Sprite):
         self.image = pygame.transform.scale(self.image, self.size)
         self.rect = pygame.Rect((self.x + 5, self.y + 5), (self.size[0]-10, self.size[1]-10))
         self.kind = type_control
-        self.lives = 300000
+        self.lives = 3
         self.bullet = AMOUNT_BULLET
         self.score = 0
         self.bullets_in_game = []
@@ -741,9 +741,10 @@ is_sound_on = True
 
 # Настройка текста
 heigth_font = HEIGHT//35
-info_text = pygame.font.Font('fonts/DelaGothicOne-Regular.ttf', heigth_font)
-info_text_underline = pygame.font.Font('fonts/DelaGothicOne-Regular.ttf', heigth_font)
+info_text = pygame.font.Font('fonts/Marske.ttf', heigth_font)
+info_text_underline = pygame.font.Font('fonts/Marske.ttf', heigth_font)
 info_text_underline.set_underline(True)
+boss_text = pygame.font.Font('fonts/New Zelek.ttf', heigth_font)
 
 # Вспомогательные переменные, которые возможно нужны
 kind_buff = 0
@@ -1063,49 +1064,51 @@ while running:
         # Установка видимого курсора
         pygame.mouse.set_visible(True)
 
-        if not record:
-            file_record = open('high_record.txt', 'r')
-            try:
-                record = int(file_record.readline())
-            except ValueError:
-                print('Ошибка! В файле не число!')
-            file_record.close()
-
-        else:
-            max_score = 0
-            winner = -1
-            for (el, pl) in enumerate(PLAYER_LIST):
-                if pl.score > max_score:
-                    max_score = pl.score
-                    if winner == el:
-                        winner = 3
-                        break
-                    winner = el
-            if max_score >= record:
-                file_record = open('high_record.txt', 'w')
-                record = max_score
-                file_record.write(str(record))
+        if not plot:
+            if not record:  # Чтение рекорда из файлика
+                file_record = open('high_record.txt', 'r')
+                try:
+                    record = int(file_record.readline())
+                except ValueError:
+                    print('Ошибка! В файле не число!')
                 file_record.close()
 
-            if len(PLAYER_LIST) == 2:
-                if winner != -1:
-                    text_winner = info_text.render('Победитель: Игрок ' + str(winner+1), True, 'White')
-                    text_winner_rect = text_winner.get_rect(center=(WIDTH//2, HEIGHT//2 - 100))
-                    screen.blit(text_winner, text_winner_rect)
-                else:
-                    text_winner = info_text.render('Победила Дружба!', True, 'White')
-                    text_winner_rect = text_winner.get_rect(center=(WIDTH//2, HEIGHT//2 - 100))
-                    screen.blit(text_winner, text_winner_rect)
+            else:
+                max_score = 0
+                winner = -1
+                for (el, pl) in enumerate(PLAYER_LIST):
+                    if pl.score > max_score:
+                        max_score = pl.score
+                        if winner == el:
+                            winner = 3
+                            break
+                        winner = el
 
-        text_record = info_text.render('Рекорд: ' + str(record), True, 'White')
-        screen.blit(text_record, (0, 24))
+                if max_score > record:  # Запись рекорда в файл
+                    file_record = open('high_record.txt', 'w')
+                    record = max_score
+                    file_record.write(str(record))
+                    file_record.close()
+
+                if len(PLAYER_LIST) == 2:
+                    if winner != -1:
+                        text_winner = info_text.render('Победитель: Игрок ' + str(winner+1), True, 'White')
+                        text_winner_rect = text_winner.get_rect(center=(WIDTH//2, HEIGHT//2 - 100))
+                        screen.blit(text_winner, text_winner_rect)
+                    else:
+                        text_winner = info_text.render('Победила Дружба!', True, 'White')
+                        text_winner_rect = text_winner.get_rect(center=(WIDTH//2, HEIGHT//2 - 100))
+                        screen.blit(text_winner, text_winner_rect)
+
+                text_record = info_text.render('Рекорд: ' + str(record), True, 'White')
+                screen.blit(text_record, (0, 24))
 
         if win and plot:
-            text_death = info_text.render('Победюн', True, 'White')
+            text_death = info_text.render('Победа :3', True, 'White')
         else:
-            text_death = info_text.render('Потрачено', True, 'White')
+            text_death = info_text.render('Проигрыш (T_T)', True, 'White')
 
-        text_death_rect = text_death.get_rect(center=(WIDTH // 2, 2 * HEIGHT // 3))
+        text_death_rect = text_death.get_rect(center=(WIDTH // 2, HEIGHT // 3))
         screen.blit(text_death, text_death_rect)
 
         btn_sizes = (WIDTH // 5, HEIGHT // 10)
