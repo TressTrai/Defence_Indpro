@@ -161,8 +161,8 @@ class BossEvent(pygame.sprite.Sprite):
         self.health = BOSS_HEALTH
         self.laser = Laser(temp_player_list[0].x)
 
-        self.size = (WIDTH, 150)
-        self.image = pygame.image.load('img/buff_heart.png').convert_alpha()
+        self.size = (WIDTH, 250)
+        self.image = pygame.image.load('img/boss.png').convert_alpha()
         self.image = pygame.transform.scale(self.image, self.size)
         self.x = 0
         self.y = -100
@@ -194,7 +194,7 @@ class BossEvent(pygame.sprite.Sprite):
     def draw(self, surf):
         surf.blit(self.image, (self.x, self.y))
         # Отображение коллайдера
-        pygame.draw.rect(surf, 'Red', self.rect, 2)
+        # pygame.draw.rect(surf, 'Red', self.rect, 2)
 
         pygame.draw.rect(surf, 'White', (WIDTH//2 - 300, 32, 600, 50), 6)
         pygame.draw.rect(surf, 'Red', (WIDTH//2 - 300 + 8, 39, self.health, 36))
@@ -286,7 +286,7 @@ class Enemy(pygame.sprite.Sprite):
     def draw(self, surf):
         surf.blit(self.image, (self.x, self.y))
         # отображение коллайдера
-        # pygame.draw.rect(surf, 'Red', self.rect, 2)
+        pygame.draw.rect(surf, 'Red', self.rect, 2)
 
 
 # Класс Игрока
@@ -700,8 +700,8 @@ def toggle_fullscreen():
         is_fullscreen = True
 
     heigth_font = HEIGHT // 35
-    info_text = pygame.font.Font('fonts/DelaGothicOne-Regular.ttf', heigth_font)
-    info_text_underline = pygame.font.Font('fonts/DelaGothicOne-Regular.ttf', heigth_font)
+    info_text = pygame.font.Font('fonts/Marske.ttf', heigth_font)
+    info_text_underline = pygame.font.Font('fonts/Marske.ttf', heigth_font)
     info_text_underline.set_underline(True)
 
     background = pygame.transform.scale(background, (WIDTH, 1800))
@@ -1014,7 +1014,7 @@ while running:
                         if pl.infinite_bullet:
                             info_bullet = info_text.render('Пули: ∞', True, 'White')
                             seconds = (pygame.time.get_ticks()-pl.time)/1000
-                            info_timer_infinity = info_text.render('00:0' + str(round(10-seconds)-1), True, 'Red')
+                            info_timer_infinity = info_text.render('00.0' + str(round(10-seconds)-1), True, 'Red')
                             if i == 0:
                                 info_timer_infinity_rect = info_timer_infinity.get_rect(topleft=(0, 4 * heigth_font))
                             else:
