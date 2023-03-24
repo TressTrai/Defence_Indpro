@@ -116,14 +116,14 @@ class Button(pygame.sprite.Sprite):
         self.size = size
 
         self.image_passive = pygame.image.load(file_name_passive).convert_alpha()
-        self.image_passive = pygame.transform.scale(self.image_passive, size)
+        self.image_passive = pygame.transform.scale(self.image_passive, self.size)
 
         self.image_active = pygame.image.load(file_name_active).convert_alpha()
-        self.image_active = pygame.transform.scale(self.image_active, size)
+        self.image_active = pygame.transform.scale(self.image_active, self.size)
 
         self.image = self.image_passive
 
-        self.rect = pygame.Rect((self.x, self.y), size)
+        self.rect = pygame.Rect((self.x, self.y), self.size)
 
         self.text = info_text.render(text, True, 'White')
         self.text_rect = self.text.get_rect(center=(self.size[0]//2 + self.x, self.size[1]//2 + self.y))
@@ -173,6 +173,8 @@ class BossEvent(pygame.sprite.Sprite):
     def appear(self):
         if self.y < self.max_y:
             self.y += 3
+        else:
+            self.y = 0
         self.rect = pygame.Rect((self.x, self.y), self.size)
 
     # Обычная стрельба босса
@@ -286,7 +288,7 @@ class Enemy(pygame.sprite.Sprite):
     def draw(self, surf):
         surf.blit(self.image, (self.x, self.y))
         # отображение коллайдера
-        pygame.draw.rect(surf, 'Red', self.rect, 2)
+        # pygame.draw.rect(surf, 'Red', self.rect, 2)
 
 
 # Класс Игрока
@@ -347,7 +349,7 @@ class Player(pygame.sprite.Sprite):
     # Пиу-пяу
     def shoot(self):
 
-        if (len(self.bullets_in_game) < self.bullet or self.infinite_bullet) and self.lives > 0:
+        if (len(self.bullets_in_game) < self.bullet or self.infinite_bullet) and self.lives > 0 and not pause:
             flag = False
 
             if self.kind == 0 and event.type == pygame.MOUSEBUTTONDOWN:
@@ -377,12 +379,21 @@ def scene_main_menu():
     global is_sound_on
     global screen, WIDTH, HEIGHT
 
+    # Полноэкранный режим
     if is_fullscreen:
-        btn_fullscreen = Button('img/buff_heart.png', 'img/buff_heart.png', '', WIDTH - 50, 0, (50, 50))
+        btn_fullscreen = Button('img/fullscreen_off.png', 'img/fullscreen_off.png', '', WIDTH - WIDTH//30-HEIGHT//40, HEIGHT//40, (WIDTH//30, WIDTH//30))
     else:
-        btn_fullscreen = Button('img/buff_bullet.png', 'img/buff_bullet.png', '', WIDTH - 50, 0, (50, 50))
+        btn_fullscreen = Button('img/fullscreen_on.png', 'img/fullscreen_on.png', '', WIDTH - WIDTH//30-HEIGHT//40, HEIGHT//40, (WIDTH//30, WIDTH//30))
 
     btn_fullscreen.draw(screen)
+
+    # Звук
+    if is_sound_on:
+        btn_volume = Button('img/sound_on.png', 'img/sound_on.png', '', WIDTH // 60, HEIGHT // 60, (WIDTH // 25, WIDTH // 25))
+    else:
+        btn_volume = Button('img/sound_off.png', 'img/sound_off.png', '', WIDTH // 60, HEIGHT // 60, (WIDTH // 25, WIDTH // 25))
+
+    btn_volume.draw(screen)
 
     text_caption = info_text.render(NAME_GAME, True, 'White')
     text_caption_rect = text_caption.get_rect(center=(WIDTH // 2, 200))
@@ -420,9 +431,6 @@ def scene_main_menu():
             boss_bullets_in_game.clear()
             buffs_in_game.clear()
 
-            pygame.mixer.music.load('music/background.ogg')
-            pygame.mixer.music.set_volume(0.2)
-            is_sound_on = True
 
         if btn_play_plot.is_click(event):
             plot = True
@@ -434,6 +442,9 @@ def scene_main_menu():
 
         elif btn_exit.is_click(event):
             running = False
+
+        elif btn_volume.is_click(event):
+            toggle_sound()
 
         elif event.type == pygame.VIDEORESIZE and not is_fullscreen:
             WIDTH = event.w
@@ -575,6 +586,7 @@ def cut_scene():
             if count_cut > 2:
                 stage += 1
                 count_cut = 1
+                pygame.mixer.music.load('music/background.ogg')
                 pygame.mixer.music.play(-1)
 
 
@@ -619,9 +631,9 @@ def scene_pause():
 
     # Звук
     if is_sound_on:
-        btn_volume = Button('img/sound_on.png', 'img/sound_on.png', '', WIDTH // 60, HEIGHT // 60, (WIDTH // 30, WIDTH // 30))
+        btn_volume = Button('img/sound_on.png', 'img/sound_on.png', '', WIDTH // 60, HEIGHT // 60, (WIDTH // 25, WIDTH // 25))
     else:
-        btn_volume = Button('img/sound_off.png', 'img/sound_off.png', '', WIDTH // 60, HEIGHT // 60, (WIDTH // 30, WIDTH // 30))
+        btn_volume = Button('img/sound_off.png', 'img/sound_off.png', '', WIDTH // 60, HEIGHT // 60, (WIDTH // 25, WIDTH // 25))
 
     btn_volume.draw(screen)
 
@@ -654,6 +666,8 @@ def scene_pause():
             running = False
         elif btn_main_menu.is_click(event):
             stage = 0
+            pygame.mixer.music.load('music/main_menu.mp3')
+            pygame.mixer.music.play(-1)
         elif btn_volume.is_click(event):
             toggle_sound()
         elif event.type == pygame.VIDEORESIZE and not is_fullscreen:
@@ -680,8 +694,10 @@ def toggle_sound():
     global is_sound_on
     if is_sound_on:
         is_sound_on = False
+        pygame.mixer.music.set_volume(0)
     else:
         is_sound_on = True
+        pygame.mixer.music.set_volume(0.2)
 
 
 def toggle_fullscreen():
@@ -767,7 +783,7 @@ while running:
 
     clock.tick(FPS)
 
-    screen.fill('Black')
+    screen.fill('#101331')
 
     # Главное меню
     if stage == 0:
@@ -787,6 +803,7 @@ while running:
             cut_scene()
         else:
             stage += 1
+            pygame.mixer.music.load('music/background.ogg')
             pygame.mixer.music.play(-1)
 
     # Игровое поле
@@ -801,12 +818,6 @@ while running:
                 background_pos += 3
                 if background_pos >= 1800:
                     background_pos = 0
-
-            # Музыка / не музыка
-            if not is_sound_on:
-                pygame.mixer.music.set_volume(0)
-            else:
-                pygame.mixer.music.set_volume(0.2)
 
             # Создание перемешанного списка ради разрешения конфликтных ситуаций в мультиплеере
             temp_player_list = PLAYER_LIST.copy()
@@ -892,6 +903,7 @@ while running:
             else:
                 # Невидимость курсора
                 pygame.mouse.set_visible(False)
+
                 # Отрисовка и столкновения баффов (в класс?)
                 if buffs_in_game:
                     for entity in list(buffs_in_game):
@@ -948,7 +960,7 @@ while running:
                                             if entity.kind == 0:
                                                 pl.score += 1
                                             else:
-                                                pl.score += 5
+                                                pl.score += 3
                                             sound_death_enemy.play()
 
                                         # Спавн Баффов
@@ -1014,7 +1026,7 @@ while running:
                         if pl.infinite_bullet:
                             info_bullet = info_text.render('Пули: ∞', True, 'White')
                             seconds = (pygame.time.get_ticks()-pl.time)/1000
-                            info_timer_infinity = info_text.render('00.0' + str(round(10-seconds)-1), True, 'Red')
+                            info_timer_infinity = info_text.render('00-0' + str(round(10-seconds)-1), True, 'Red')
                             if i == 0:
                                 info_timer_infinity_rect = info_timer_infinity.get_rect(topleft=(0, 4 * heigth_font))
                             else:
@@ -1104,9 +1116,9 @@ while running:
                 screen.blit(text_record, (0, 24))
 
         if win and plot:
-            text_death = info_text.render('Победа :3', True, 'White')
+            text_death = info_text.render('Победа', True, 'White')
         else:
-            text_death = info_text.render('Проигрыш (T_T)', True, 'White')
+            text_death = info_text.render('Проигрыш', True, 'White')
 
         text_death_rect = text_death.get_rect(center=(WIDTH // 2, HEIGHT // 3))
         screen.blit(text_death, text_death_rect)
@@ -1156,8 +1168,9 @@ while running:
                     player_count += 1
 
             elif btn_main_menu.is_click(event):
-                pygame.mixer.music.load('music/main_menu.mp3')
                 stage = 0
+                pygame.mixer.music.load('music/main_menu.mp3')
+                pygame.mixer.music.play(-1)
 
             elif btn_exit.is_click(event):
                 running = False
