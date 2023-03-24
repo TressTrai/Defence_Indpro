@@ -561,9 +561,10 @@ def cut_scene():
     global running
     global count_cut
 
-    bg_cut_scene = pygame.image.load('img/cs_' + str(count_cut) + '.png')
-    pygame.transform.scale(bg_cut_scene, (WIDTH, HEIGHT))
-    screen.blit(bg_cut_scene, (0, 0))
+    bg_cut_scene = pygame.image.load('img/cs' + str(count_cut) + '.png').convert()
+    bg_cut_scene = pygame.transform.scale(bg_cut_scene, (HEIGHT*1.7778, HEIGHT))
+    bg_cut_scene_rect = bg_cut_scene.get_rect(center=(WIDTH//2, HEIGHT//2))
+    screen.blit(bg_cut_scene, bg_cut_scene_rect)
 
     # Полупрозрачный прямоугольник
     alpha = pygame.Surface((WIDTH - 50, HEIGHT // 5))
@@ -583,7 +584,7 @@ def cut_scene():
 
         elif event.type == pygame.KEYUP and event.key == pygame.K_SPACE or event.type == pygame.MOUSEBUTTONUP:
             count_cut += 1
-            if count_cut > 2:
+            if count_cut > 5:
                 stage += 1
                 count_cut = 1
                 pygame.mixer.music.load('music/background.ogg')
