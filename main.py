@@ -104,18 +104,22 @@ class FallingBuff(pygame.sprite.Sprite):
 
 # класс Кнопок
 class Button(pygame.sprite.Sprite):
-    def __init__(self, file_name_passive, file_name_active, text, x, y, size):
+    def __init__(self, button_passive, button_active, text, x, y, size):
         super().__init__()
 
         self.x = x
         self.y = y
         self.size = size
 
-        self.image_passive = pygame.image.load(file_name_passive).convert_alpha()
-        self.image_passive = pygame.transform.scale(self.image_passive, self.size)
+        # self.image_passive = pygame.image.load(file_name_passive).convert_alpha()
+        # self.image_passive = pygame.transform.scale(self.image_passive, self.size)
 
-        self.image_active = pygame.image.load(file_name_active).convert_alpha()
-        self.image_active = pygame.transform.scale(self.image_active, self.size)
+        self.image_passive = pygame.transform.scale(button_passive, self.size)
+
+        # self.image_active = pygame.image.load(file_name_active).convert_alpha()
+        # self.image_active = pygame.transform.scale(self.image_active, self.size)
+
+        self.image_active = pygame.transform.scale(button_active, self.size)
 
         self.image = self.image_passive
 
@@ -377,17 +381,17 @@ def scene_main_menu():
 
     # Полноэкранный режим
     if is_fullscreen:
-        btn_fullscreen = Button('img/fullscreen_off.png', 'img/fullscreen_off.png', '', WIDTH - WIDTH//30-HEIGHT//40, HEIGHT//40, (WIDTH//30, WIDTH//30))
+        btn_fullscreen = Button(fullscreen_off_image, fullscreen_off_image, '', WIDTH - WIDTH//30-HEIGHT//40, HEIGHT//40, (WIDTH//30, WIDTH//30))
     else:
-        btn_fullscreen = Button('img/fullscreen_on.png', 'img/fullscreen_on.png', '', WIDTH - WIDTH//30-HEIGHT//40, HEIGHT//40, (WIDTH//30, WIDTH//30))
+        btn_fullscreen = Button(fullscreen_on_image, fullscreen_on_image, '', WIDTH - WIDTH//30-HEIGHT//40, HEIGHT//40, (WIDTH//30, WIDTH//30))
 
     btn_fullscreen.draw(screen)
 
     # Звук
     if is_sound_on:
-        btn_volume = Button('img/sound_on.png', 'img/sound_on.png', '', WIDTH // 60, HEIGHT // 60, (WIDTH // 25, WIDTH // 25))
+        btn_volume = Button(sound_on_image, sound_on_image, '', WIDTH // 60, HEIGHT // 60, (WIDTH // 25, WIDTH // 25))
     else:
-        btn_volume = Button('img/sound_off.png', 'img/sound_off.png', '', WIDTH // 60, HEIGHT // 60, (WIDTH // 25, WIDTH // 25))
+        btn_volume = Button(sound_off_image, sound_off_image, '', WIDTH // 60, HEIGHT // 60, (WIDTH // 25, WIDTH // 25))
 
     btn_volume.draw(screen)
 
@@ -401,9 +405,9 @@ def scene_main_menu():
     btn_y = HEIGHT // 2
     btn_offset_y = btn_sizes[1] + HEIGHT // 40
 
-    btn_play_plot = Button('img/button1.png', 'img/button2.png', 'Сюжет', btn_x, btn_y + 0 * btn_offset_y, btn_sizes)
-    btn_play_endless = Button('img/button1.png', 'img/button2.png', 'Бесконечный', btn_x, btn_y + 1 * btn_offset_y, btn_sizes)
-    btn_exit = Button('img/button1.png', 'img/button2.png', 'Выход', btn_x, btn_y + 2 * btn_offset_y, btn_sizes)
+    btn_play_plot = Button(button1_image, button2_image, 'Сюжет', btn_x, btn_y + 0 * btn_offset_y, btn_sizes)
+    btn_play_endless = Button(button1_image, button2_image, 'Бесконечный', btn_x, btn_y + 1 * btn_offset_y, btn_sizes)
+    btn_exit = Button(button1_image, button2_image, 'Выход', btn_x, btn_y + 2 * btn_offset_y, btn_sizes)
 
     btn_play_plot.update(screen)
     btn_play_endless.update(screen)
@@ -458,8 +462,8 @@ def scene_sel_number_of_player():
     btn_sizes = (WIDTH // 2 - 2 * btn_x, HEIGHT // 3)
     btn_offset_x = btn_sizes[0] + 2 * btn_x
 
-    btn_one = Button('img/button1.png', 'img/button2.png', '1 игрок', btn_x + 0 * btn_offset_x, btn_y, btn_sizes)
-    btn_two = Button('img/button1.png', 'img/button2.png', '2 игрока', btn_x + 1 * btn_offset_x, btn_y, btn_sizes)
+    btn_one = Button(button1_image, button2_image, '1 игрок', btn_x + 0 * btn_offset_x, btn_y, btn_sizes)
+    btn_two = Button(button1_image, button2_image, '2 игрока', btn_x + 1 * btn_offset_x, btn_y, btn_sizes)
 
     btn_one.update(screen)
     btn_two.update(screen)
@@ -492,9 +496,9 @@ def scene_sel_ctrl_type():
     btn_sizes = (WIDTH // 3 - btn_x, HEIGHT // 3)
     btn_offset_x = btn_sizes[0] + btn_x // 2
 
-    btn_mouse = Button('img/button1.png', 'img/button2.png', 'Мышка', btn_x + 0 * btn_offset_x, btn_y, btn_sizes)
-    btn_ad = Button('img/button1.png', 'img/button2.png', 'Клавиши AD', btn_x + 1 * btn_offset_x, btn_y, btn_sizes)
-    btn_arrow = Button('img/button1.png', 'img/button2.png', 'Стрелки', btn_x + 2 * btn_offset_x, btn_y, btn_sizes)
+    btn_mouse = Button(button1_image, button2_image, 'Мышка', btn_x + 0 * btn_offset_x, btn_y, btn_sizes)
+    btn_ad = Button(button1_image, button2_image, 'Клавиши AD', btn_x + 1 * btn_offset_x, btn_y, btn_sizes)
+    btn_arrow = Button(button1_image, button2_image, 'Стрелки', btn_x + 2 * btn_offset_x, btn_y, btn_sizes)
 
     old_type_control = None
     if player_count == 1:
@@ -538,8 +542,7 @@ def cut_scene(end):
     global running
     global count_cut
 
-    bg_cut_scene = pygame.image.load('img/cs' + str(count_cut) + '.png').convert()
-    bg_cut_scene = pygame.transform.scale(bg_cut_scene, (HEIGHT*1.7778, HEIGHT))
+    bg_cut_scene = pygame.transform.scale(cut_scene_image[count_cut-1], (HEIGHT*1.7778, HEIGHT))
     bg_cut_scene_rect = bg_cut_scene.get_rect(center=(WIDTH//2, HEIGHT//2))
     screen.blit(bg_cut_scene, bg_cut_scene_rect)
 
@@ -623,9 +626,9 @@ def scene_pause():
 
     # Звук
     if is_sound_on:
-        btn_volume = Button('img/sound_on.png', 'img/sound_on.png', '', WIDTH // 60, HEIGHT // 60, (WIDTH // 25, WIDTH // 25))
+        btn_volume = Button(sound_on_image, sound_on_image, '', WIDTH // 60, HEIGHT // 60, (WIDTH // 25, WIDTH // 25))
     else:
-        btn_volume = Button('img/sound_off.png', 'img/sound_off.png', '', WIDTH // 60, HEIGHT // 60, (WIDTH // 25, WIDTH // 25))
+        btn_volume = Button(sound_off_image, sound_off_image, '', WIDTH // 60, HEIGHT // 60, (WIDTH // 25, WIDTH // 25))
 
     btn_volume.draw(screen)
 
@@ -639,9 +642,9 @@ def scene_pause():
     btn_y = HEIGHT // 2
     btn_offset_y = btn_sizes[1] + HEIGHT // 40
 
-    btn_continue = Button('img/button1.png', 'img/button2.png', 'Продолжить', btn_x, btn_y + 0 * btn_offset_y, btn_sizes)
-    btn_main_menu = Button('img/button1.png', 'img/button2.png', 'Главное меню', btn_x, btn_y + 1 * btn_offset_y, btn_sizes)
-    btn_exit = Button('img/button1.png', 'img/button2.png', 'Выход', btn_x, btn_y + 2 * btn_offset_y, btn_sizes)
+    btn_continue = Button(button1_image, button2_image, 'Продолжить', btn_x, btn_y + 0 * btn_offset_y, btn_sizes)
+    btn_main_menu = Button(button1_image, button2_image, 'Главное меню', btn_x, btn_y + 1 * btn_offset_y, btn_sizes)
+    btn_exit = Button(button1_image, button2_image, 'Выход', btn_x, btn_y + 2 * btn_offset_y, btn_sizes)
 
     btn_continue.update(screen)
     btn_main_menu.update(screen)
@@ -757,12 +760,30 @@ info_font_underline.set_underline(True)
 boss_font = pygame.font.Font('fonts/New Zelek.ttf', heigth_font_menu)
 title_font = pygame.font.Font('fonts/Researchremix-1nje.otf', heigth_font_title)
 
+# Загрузка некоторых изображений (ради оптимизации)
+background = pygame.image.load('img/background.png').convert()
+background = pygame.transform.scale(background, (WIDTH, 1800))
+
+button1_image = pygame.image.load('img/button1.png').convert_alpha()
+button2_image = pygame.image.load('img/button2.png').convert_alpha()
+
+fullscreen_off_image = pygame.image.load('img/fullscreen_off.png').convert_alpha()
+fullscreen_on_image = pygame.image.load('img/fullscreen_on.png').convert_alpha()
+
+sound_off_image = pygame.image.load('img/sound_off.png').convert_alpha()
+sound_on_image = pygame.image.load('img/sound_on.png').convert_alpha()
+
+cut_scene_image = []
+for i in range(12):
+    cut_scene_image.append(pygame.image.load('img/cs' + str(i+1) + '.png').convert())
+
 # Вспомогательные переменные, которые возможно нужны
 kind_buff = 0
 pause = False
 plot = False
 boss = None
 count_cut = 1
+background_pos = 0
 
 # Счетчик сцен (0 - Главное меню; 1 - Выбор количества игроков; 2 - Выбор управления; 3 - Катсцена; 4 - Игровое поле; 5 - Финальная катсцена; 6 - Фин)
 stage = 0
@@ -776,13 +797,11 @@ file_record = open('text/high_record.txt', 'r')
 record = int(file_record.readline())
 file_record.close()
 
-background = pygame.image.load('img/background.png').convert()
-background = pygame.transform.scale(background, (WIDTH, 1800))
-background_pos = 0
 
 # Основной цикл игры
 running = True
 while running:
+    print(clock.get_fps())
 
     clock.tick(FPS)
 
@@ -1118,13 +1137,13 @@ while running:
         btn_y = HEIGHT // 2
         btn_offset_y = btn_sizes[1] + HEIGHT // 40
 
-        btn_retry = Button('img/button1.png', 'img/button2.png', 'Заново', btn_x, btn_y + 0 * btn_offset_y, btn_sizes)
+        btn_retry = Button(button1_image, button2_image, 'Заново', btn_x, btn_y + 0 * btn_offset_y, btn_sizes)
         btn_retry.update(screen)
 
-        btn_main_menu = Button('img/button1.png', 'img/button2.png', 'Главное меню', btn_x, btn_y + 1 * btn_offset_y, btn_sizes)
+        btn_main_menu = Button(button1_image, button2_image, 'Главное меню', btn_x, btn_y + 1 * btn_offset_y, btn_sizes)
         btn_main_menu.update(screen)
 
-        btn_exit = Button('img/button1.png', 'img/button2.png', 'Выход', btn_x, btn_y + 2 * btn_offset_y, btn_sizes)
+        btn_exit = Button(button1_image, button2_image, 'Выход', btn_x, btn_y + 2 * btn_offset_y, btn_sizes)
         btn_exit.update(screen)
 
         for event in pygame.event.get():
