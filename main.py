@@ -9,7 +9,7 @@ WIDTH, HEIGHT = (info.current_w, info.current_h)
 is_fullscreen = True
 
 FPS = 60
-NAME_GAME = 'Shoot in space'
+NAME_GAME = 'Защита Индпро!'
 
 # Параметры игрока
 TYPE_CONTROL = None
@@ -19,14 +19,13 @@ number_of_player = None
 
 # Параметры всех врагов
 ENEMY_COUNT_DIFFICULTY = 30
-ENEMY_APPEAR_SPEED = (1500, 3000)  # чем меньше числа, тем быстрее появляется враг (1500, 3000)
+ENEMY_APPEAR_SPEED = (1620, 3000)  # чем меньше числа, тем быстрее появляется враг (1500, 3000)
 BOSS_IN_GAME = False
 BOSS_HEALTH = 584
 win = False
 
 # Параметры пуль
-BULLET_SIZE = (10, 10)
-BULLET_SPEED = 5
+BULLET_SPEED = HEIGHT//160
 AMOUNT_BULLET = 3
 
 # Параметры баффов ([1] - доб. Жизнь [2] - доб. макс Пуль [3] - бесконечные пули на некоторое время)
@@ -122,7 +121,7 @@ class Button(pygame.sprite.Sprite):
 
         self.rect = pygame.Rect((self.x, self.y), self.size)
 
-        self.text = info_text.render(text, True, 'White')
+        self.text = info_font.render(text, True, 'White')
         self.text_rect = self.text.get_rect(center=(self.size[0]//2 + self.x, self.size[1]//2 + self.y))
 
     # Обновление кнопки, когда на нее навели
@@ -177,7 +176,7 @@ class BossEvent(pygame.sprite.Sprite):
     # Обычная стрельба босса
     def shoot(self):
         if event.type == enemy_timer and not pause:
-            random_size = random.randint(40, 80)
+            random_size = random.randint(WIDTH//40, WIDTH//20)
             bul = Bullet('img/meteorite.png', random.randint(0, WIDTH - random_size), 0, (random_size, random_size),
                          -1 * BULLET_SPEED)
             boss_bullets_in_game.append(bul)
@@ -197,7 +196,7 @@ class BossEvent(pygame.sprite.Sprite):
 
         pygame.draw.rect(surf, 'White', (WIDTH//2 - 300, 32, 600, 50), 6)
         pygame.draw.rect(surf, 'Red', (WIDTH//2 - 300 + 8, 39, self.health, 36))
-        name_boss = boss_text.render('Гайя', True, 'White')
+        name_boss = boss_font.render('Гайя', True, 'White')
         name_boss_rect = name_boss.get_rect(center=(WIDTH//2, 20))
         surf.blit(name_boss, name_boss_rect)
 
@@ -208,7 +207,7 @@ class Laser(pygame.sprite.Sprite):
         super().__init__()
         self.current_width, self.current_heigth = (1, 1)
         self.current_size = (self.current_width, self.current_heigth)
-        self.width, self.heigth = random.randint(50, 90), HEIGHT
+        self.width, self.heigth = random.randint(WIDTH//25, WIDTH//15), HEIGHT
         self.size = (self.width, self.heigth)
         self.x = player_x
         self.y = 0
@@ -221,7 +220,7 @@ class Laser(pygame.sprite.Sprite):
             self.current_width += 2
             self.x -= 1
         if self.current_heigth < self.heigth:
-            self.current_heigth += 15
+            self.current_heigth += HEIGHT // 40
 
         self.current_size = (self.current_width, self.current_heigth)
         self.image = pygame.transform.scale(self.raw_image, self.current_size)
@@ -392,8 +391,8 @@ def scene_main_menu():
 
     btn_volume.draw(screen)
 
-    text_caption = info_text.render(NAME_GAME, True, 'White')
-    text_caption_rect = text_caption.get_rect(center=(WIDTH // 2, 200))
+    text_caption = title_font.render(NAME_GAME, True, 'White')
+    text_caption_rect = text_caption.get_rect(center=(WIDTH // 2, 300))
 
     screen.blit(text_caption, text_caption_rect)
 
@@ -450,7 +449,7 @@ def scene_sel_number_of_player():
     global number_of_player
     global screen, WIDTH, HEIGHT
 
-    text_chose_number = info_text.render('Сколько игроков?', True, 'White')
+    text_chose_number = info_font.render('Сколько игроков', True, 'White')
     text_choose_number_rect = text_chose_number.get_rect(center=(WIDTH // 2, HEIGHT // 3))
     screen.blit(text_chose_number, text_choose_number_rect)
 
@@ -482,10 +481,10 @@ def scene_sel_ctrl_type():
     global player_count, TYPE_CONTROL, number_of_player
     global screen, WIDTH, HEIGHT
 
-    text_player = info_text.render(str(player_count + 1) + ' игрок', True, 'White')
-    text_player_rect = text_player.get_rect(center=(WIDTH//2, HEIGHT // 3 - heigth_font))
+    text_player = info_font.render(str(player_count + 1) + ' игрок', True, 'White')
+    text_player_rect = text_player.get_rect(center=(WIDTH // 2, HEIGHT // 3 - heigth_font_menu))
 
-    text_choose_type_movement = info_text.render('Выберите тип управления: ', True, 'White')
+    text_choose_type_movement = info_font.render('Выберите тип управления', True, 'White')
     text_choose_type_movement_rect = text_choose_type_movement.get_rect(center=(WIDTH // 2, HEIGHT // 3))
 
     btn_x = WIDTH // 30
@@ -547,7 +546,7 @@ def cut_scene(end):
     # Полупрозрачный прямоугольник
     alpha = pygame.Surface((WIDTH - 50, HEIGHT // 5))
     alpha.set_alpha(128)
-    alpha.fill((255, 255, 255))
+    alpha.fill('White')
     alpha_rect = alpha.get_rect(midbottom=(WIDTH // 2, HEIGHT - 10))
     screen.blit(alpha, alpha_rect)
 
@@ -576,8 +575,9 @@ def cut_scene(end):
             count_cut += 1
             if count_cut > end:
                 stage += 1
-                pygame.mixer.music.load('music/background.ogg')
-                pygame.mixer.music.play(-1)
+                if stage == 4:
+                    pygame.mixer.music.load('music/background.ogg')
+                    pygame.mixer.music.play(-1)
                 if len(PLAYER_LIST) == 1:
                     count_cut += 1
 
@@ -629,7 +629,7 @@ def scene_pause():
 
     btn_volume.draw(screen)
 
-    text_pause = info_text.render('Пауза', True, 'White')
+    text_pause = info_font.render('Пауза', True, 'White')
     text_pause_rect = text_pause.get_rect(center=(WIDTH // 2, HEIGHT // 3))
 
     screen.blit(text_pause, text_pause_rect)
@@ -689,7 +689,7 @@ def toggle_sound():
 def toggle_fullscreen():
     global is_fullscreen, WIDTH, HEIGHT
     global screen
-    global heigth_font, info_text, info_text_underline, boss_text, cut_font
+    global heigth_font_menu, info_font, info_font_underline, boss_font, cut_font, title_font, heigth_font_title
     global background
 
     if is_fullscreen:
@@ -701,13 +701,15 @@ def toggle_fullscreen():
         screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.FULLSCREEN)
         is_fullscreen = True
 
-    heigth_font = HEIGHT // 35
+    heigth_font_menu = HEIGHT // 35
     heigth_font_cs = HEIGHT // 30
+    heigth_font_title = HEIGHT // 20
     cut_font = pygame.font.Font('fonts/Jura-VariableFont_wght.ttf', heigth_font_cs)
-    info_text = pygame.font.Font('fonts/Marske.ttf', heigth_font)
-    info_text_underline = pygame.font.Font('fonts/Marske.ttf', heigth_font)
-    info_text_underline.set_underline(True)
-    boss_text = pygame.font.Font('fonts/New Zelek.ttf', heigth_font)
+    info_font = pygame.font.Font('fonts/Marske.ttf', heigth_font_menu)
+    info_font_underline = pygame.font.Font('fonts/Marske.ttf', heigth_font_menu)
+    info_font_underline.set_underline(True)
+    boss_font = pygame.font.Font('fonts/New Zelek.ttf', heigth_font_menu)
+    title_font = pygame.font.Font('fonts/Researchremix-1nje.otf', heigth_font_title)
 
     background = pygame.transform.scale(background, (WIDTH, 1800))
 
@@ -715,7 +717,6 @@ def toggle_fullscreen():
 
 
 # Настройка игры
-# screen = pygame.display.set_mode((WIDTH, HEIGHT))
 screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.FULLSCREEN)
 pygame.display.set_caption(NAME_GAME)
 
@@ -745,13 +746,16 @@ pygame.mixer.music.play(-1)
 is_sound_on = True
 
 # Настройка текста
-heigth_font = HEIGHT // 35
+heigth_font_menu = HEIGHT // 30
 heigth_font_cs = HEIGHT // 30
+heigth_font_title = HEIGHT // 20
+
 cut_font = pygame.font.Font('fonts/Jura-VariableFont_wght.ttf', heigth_font_cs)
-info_text = pygame.font.Font('fonts/Marske.ttf', heigth_font)
-info_text_underline = pygame.font.Font('fonts/Marske.ttf', heigth_font)
-info_text_underline.set_underline(True)
-boss_text = pygame.font.Font('fonts/New Zelek.ttf', heigth_font)
+info_font = pygame.font.Font('fonts/Marske.ttf', heigth_font_menu)
+info_font_underline = pygame.font.Font('fonts/Marske.ttf', heigth_font_menu)
+info_font_underline.set_underline(True)
+boss_font = pygame.font.Font('fonts/New Zelek.ttf', heigth_font_menu)
+title_font = pygame.font.Font('fonts/Researchremix-1nje.otf', heigth_font_title)
 
 # Вспомогательные переменные, которые возможно нужны
 kind_buff = 0
@@ -767,6 +771,7 @@ stage = 0
 with open('text/cutscene.txt', 'r', encoding='UTF-8') as cs:
     cs_text = [line.strip() for line in cs.readlines()]
 
+# Чтение рекорда
 file_record = open('text/high_record.txt', 'r')
 record = int(file_record.readline())
 file_record.close()
@@ -843,7 +848,7 @@ while running:
                         break
 
                 # Спавн врагов (в класс?)
-                if not BOSS_IN_GAME and event.type == enemy_timer and len(enemy_in_game) < ENEMY_COUNT_DIFFICULTY:
+                if not BOSS_IN_GAME and event.type == enemy_timer and len(enemy_in_game) < ENEMY_COUNT_DIFFICULTY and not pause:
                     kind_enemy = random.randint(0, 1)
                     enemy = Enemy(kind_enemy)
                     enemy_in_game.append(enemy)
@@ -946,9 +951,9 @@ while running:
                                             enemy_in_game.remove(entity)
                                             pl.bullets_in_game.remove(bullet)
                                             if entity.kind == 0:
-                                                pl.score += 10
+                                                pl.score += 1
                                             else:
-                                                pl.score += 30
+                                                pl.score += 3
                                             sound_death_enemy.play()
 
                                         # Спавн Баффов
@@ -994,7 +999,7 @@ while running:
                             for entity in list(pl.bullets_in_game):
                                 if entity.rect.colliderect(boss.rect):
                                     pl.bullets_in_game.remove(entity)
-                                    boss.health -= 50
+                                    boss.health -= 5
                         if boss.health < 2 * BOSS_HEALTH // 3:
                             if boss.laser.rect.colliderect(pl.rect) and pl.lives > 0:
                                 pl.lives -= 1
@@ -1007,43 +1012,43 @@ while running:
 
                 # Надписи на экране
                 for (i, pl) in enumerate(PLAYER_LIST):  # Чтоб не было мерцания берем упорядоченный список
-                    info_player = info_text_underline.render(str(i + 1) + ' игрок', True, 'White')
+                    info_player = info_font_underline.render(str(i + 1) + ' игрок', True, 'White')
                     if pl.lives > 0:
-                        info_life = info_text.render('Жизни: ' + str(pl.lives), True, 'White')
-                        info_score = info_text.render('Очки: ' + str(pl.score), True, 'White')
+                        info_life = info_font.render('Жизни ' + str(pl.lives), True, 'White')
+                        info_score = info_font.render('Очки ' + str(pl.score), True, 'White')
                         if pl.infinite_bullet:
-                            info_bullet = info_text.render('Пули: ∞', True, 'White')
+                            info_bullet = info_font.render('Пули inf', True, 'White')
                             seconds = (pygame.time.get_ticks()-pl.time)/1000
-                            info_timer_infinity = info_text.render('00-0' + str(round(10-seconds)-1), True, 'Red')
+                            info_timer_infinity = info_font.render('00 0' + str(round(10 - seconds) - 1), True, 'Red')
                             if i == 0:
-                                info_timer_infinity_rect = info_timer_infinity.get_rect(topleft=(0, 4 * heigth_font))
+                                info_timer_infinity_rect = info_timer_infinity.get_rect(topleft=(0, 4 * heigth_font_menu))
                             else:
-                                info_timer_infinity_rect = info_timer_infinity.get_rect(topright=(WIDTH, 4 * heigth_font))
+                                info_timer_infinity_rect = info_timer_infinity.get_rect(topright=(WIDTH, 4 * heigth_font_menu))
                             screen.blit(info_timer_infinity, info_timer_infinity_rect)
                             if seconds >= 9:
                                 pl.infinite_bullet = False
                         else:
                             if pl.bullet - len(pl.bullets_in_game) <= 0:
-                                info_bullet = info_text.render('Пули: 0', True, 'White')
+                                info_bullet = info_font.render('Пули 0', True, 'White')
                             else:
-                                info_bullet = info_text.render('Пули: ' + str(pl.bullet - len(pl.bullets_in_game)), True, 'White')
+                                info_bullet = info_font.render('Пули ' + str(pl.bullet - len(pl.bullets_in_game)), True, 'White')
                     else:
-                        info_life = info_text.render('Жизни: 0', True, 'White')
-                        info_score = info_text.render('Очки: ' + str(pl.score), True, 'White')
-                        info_bullet = info_text.render('Пули: 0', True, 'White')
+                        info_life = info_font.render('Жизни 0', True, 'White')
+                        info_score = info_font.render('Очки ' + str(pl.score), True, 'White')
+                        info_bullet = info_font.render('Пули 0', True, 'White')
 
                     if i == 0:
-                        info_player_rect = info_player.get_rect(topleft=(0, 0 * heigth_font))
-                        info_life_rect = info_life.get_rect(topleft=(0, 1 * heigth_font))
-                        info_bullet_rect = info_bullet.get_rect(topleft=(0, 2 * heigth_font))
-                        info_score_rect = info_score.get_rect(topleft=(0, 3 * heigth_font))
+                        info_player_rect = info_player.get_rect(topleft=(0, 0 * heigth_font_menu))
+                        info_life_rect = info_life.get_rect(topleft=(0, 1 * heigth_font_menu))
+                        info_bullet_rect = info_bullet.get_rect(topleft=(0, 2 * heigth_font_menu))
+                        info_score_rect = info_score.get_rect(topleft=(0, 3 * heigth_font_menu))
 
                         # pygame.draw.line(screen, 'White', (0, heigth_font + 5), (100, heigth_font + 5), HEIGHT // 250)
                     else:
-                        info_player_rect = info_player.get_rect(topright=(WIDTH, 0 * heigth_font))
-                        info_life_rect = info_life.get_rect(topright=(WIDTH, 1 * heigth_font))
-                        info_bullet_rect = info_bullet.get_rect(topright=(WIDTH, 2 * heigth_font))
-                        info_score_rect = info_score.get_rect(topright=(WIDTH, 3 * heigth_font))
+                        info_player_rect = info_player.get_rect(topright=(WIDTH, 0 * heigth_font_menu))
+                        info_life_rect = info_life.get_rect(topright=(WIDTH, 1 * heigth_font_menu))
+                        info_bullet_rect = info_bullet.get_rect(topright=(WIDTH, 2 * heigth_font_menu))
+                        info_score_rect = info_score.get_rect(topright=(WIDTH, 3 * heigth_font_menu))
 
                         # pygame.draw.line(screen, 'White', (WIDTH-100, heigth_font + 5), (WIDTH, heigth_font + 5), HEIGHT // 250)
 
@@ -1055,17 +1060,16 @@ while running:
         # Переключение сцены
         else:
             stage += 1
+            pygame.mixer.music.load('music/main_menu.mp3')
+            pygame.mixer.music.play(-1)
 
     # Финальная катсцена
     elif stage == 5:
-        pygame.mixer.music.stop()
-
         # Установка видимого курсора
         pygame.mouse.set_visible(True)
 
         if plot and win:
             cut_scene(11 + len(PLAYER_LIST)-1)
-            pygame.mixer.music.stop()
         else:
             stage += 1
 
@@ -1090,21 +1094,21 @@ while running:
 
             if len(PLAYER_LIST) == 2:
                 if winner != -1:
-                    text_winner = info_text.render('Победитель: Игрок ' + str(winner+1), True, 'White')
+                    text_winner = info_font.render('Победитель Игрок ' + str(winner + 1), True, 'White')
                     text_winner_rect = text_winner.get_rect(center=(WIDTH//2, HEIGHT//2 - 100))
                     screen.blit(text_winner, text_winner_rect)
                 else:
-                    text_winner = info_text.render('Победила Дружба!', True, 'White')
+                    text_winner = info_font.render('Победила Дружба', True, 'White')
                     text_winner_rect = text_winner.get_rect(center=(WIDTH//2, HEIGHT//2 - 100))
                     screen.blit(text_winner, text_winner_rect)
 
-            text_record = info_text.render('Рекорд: ' + str(record), True, 'White')
+            text_record = info_font.render('Рекорд ' + str(record), True, 'White')
             screen.blit(text_record, (0, 24))
 
         if win and plot:
-            text_death = info_text.render('Победа', True, 'White')
+            text_death = info_font.render('Победа', True, 'White')
         else:
-            text_death = info_text.render('Проигрыш', True, 'White')
+            text_death = info_font.render('Проигрыш', True, 'White')
 
         text_death_rect = text_death.get_rect(center=(WIDTH // 2, HEIGHT // 3))
         screen.blit(text_death, text_death_rect)
