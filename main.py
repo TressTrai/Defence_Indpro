@@ -87,7 +87,7 @@ class FallingBuff(pygame.sprite.Sprite):
         self.image = pygame.transform.scale(self.image, self.size)
         self.x = random.randint(0, WIDTH - self.size[0])
         self.y = 0 - self.size[1]
-        self.speed = HEIGHT // 200
+        self.speed = HEIGHT // 150
         self.rect = pygame.Rect((self.x, self.y), self.size)
 
     # Движение баффа
@@ -416,6 +416,7 @@ def scene_main_menu():
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
+
         if btn_play_plot.is_click(event) or btn_play_endless.is_click(event):
             stage += 1
             pause = False
@@ -430,7 +431,6 @@ def scene_main_menu():
             enemy_in_game.clear()
             boss_bullets_in_game.clear()
             buffs_in_game.clear()
-
 
         if btn_play_plot.is_click(event):
             plot = True
@@ -722,6 +722,8 @@ def toggle_fullscreen():
 # Настройка игры
 screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.FULLSCREEN)
 pygame.display.set_caption(NAME_GAME)
+icon = pygame.image.load('img/player_1.png').convert_alpha()
+pygame.display.set_icon(icon)
 
 # Настройка часов
 clock = pygame.time.Clock()
@@ -801,7 +803,7 @@ file_record.close()
 # Основной цикл игры
 running = True
 while running:
-    print(clock.get_fps())
+    # print(clock.get_fps())
 
     clock.tick(FPS)
 
@@ -848,71 +850,72 @@ while running:
                 temp_player_list[0] = temp_player_list[1]
                 temp_player_list[1] = temp
 
-            # Ивенты
-            for event in pygame.event.get():
-
-                # Закрытие игры
-                if event.type == pygame.QUIT:
-                    running = False
-
-                # Пауза по нажатию кнопки
-                if event.type == pygame.KEYUP and event.key == pygame.K_ESCAPE:
-                    pause = True
-                    break
-
-                # Пауза, когда экран не в фокусе
-                if event.type == pygame.ACTIVEEVENT:
-                    if event.state == 2:
-                        pause = True
-                        break
-
-                # Спавн врагов (в класс?)
-                if not BOSS_IN_GAME and event.type == enemy_timer and len(enemy_in_game) < ENEMY_COUNT_DIFFICULTY and not pause:
-                    kind_enemy = random.randint(0, 1)
-                    enemy = Enemy(kind_enemy)
-                    enemy_in_game.append(enemy)
-
-                    # Спавн врагов в зависимости от максимального количества очков
-                    max_score = 0
-                    for pl in PLAYER_LIST:
-                        if pl.score >= max_score:
-                            max_score = pl.score
-                    if ENEMY_APPEAR_SPEED[0] - 20 * max_score <= 0:
-                        if plot:
-                            if not BOSS_IN_GAME:
-                                BOSS_IN_GAME = True
-                                pygame.mixer.music.load('music/boss_theme.mp3')
-                                pygame.mixer.music.play(-1)
-                        else:
-                            pygame.time.set_timer(enemy_timer, random.randint(1, 750))
-
-                    else:
-                        pygame.time.set_timer(enemy_timer, random.randint(ENEMY_APPEAR_SPEED[0]-20*max_score,
-                                                                          ENEMY_APPEAR_SPEED[1]-30*max_score))
-
-                if BOSS_IN_GAME and not boss and len(enemy_in_game) == 0:
-                    boss = BossEvent()
-
-                # Стрельба игрока
-                for entity in PLAYER_LIST:
-                    entity.shoot()
-
-                # Атаки босса
-                if boss:
-                    if 2 * BOSS_HEALTH // 3 < boss.health:
-                        boss.shoot()
-                    elif BOSS_HEALTH // 3 < boss.health < 2 * BOSS_HEALTH // 3:
-                        boss.fire(temp_player_list[0].x + temp_player_list[0].size[0]//2)
-                    else:
-                        boss.shoot()
-                        boss.fire(temp_player_list[0].x + temp_player_list[0].size[0] // 2)
-
             # Пауза
             if pause:
                 scene_pause()
 
             # Не пауза
             else:
+
+                # Ивенты
+                for event in pygame.event.get():
+
+                    # Закрытие игры
+                    if event.type == pygame.QUIT:
+                        running = False
+
+                    # Пауза по нажатию кнопки
+                    if event.type == pygame.KEYUP and event.key == pygame.K_ESCAPE:
+                        pause = True
+                        break
+
+                    # Пауза, когда экран не в фокусе
+                    if event.type == pygame.ACTIVEEVENT:
+                        if event.state == 2:
+                            pause = True
+                            break
+
+                    # Спавн врагов (в класс?)
+                    if not BOSS_IN_GAME and event.type == enemy_timer and len(enemy_in_game) < ENEMY_COUNT_DIFFICULTY and not pause:
+                        kind_enemy = random.randint(0, 1)
+                        enemy = Enemy(kind_enemy)
+                        enemy_in_game.append(enemy)
+
+                        # Спавн врагов в зависимости от максимального количества очков
+                        max_score = 0
+                        for pl in PLAYER_LIST:
+                            if pl.score >= max_score:
+                                max_score = pl.score
+                        if ENEMY_APPEAR_SPEED[0] - 20 * max_score <= 0:
+                            if plot:
+                                if not BOSS_IN_GAME:
+                                    BOSS_IN_GAME = True
+                                    pygame.mixer.music.load('music/boss_theme.mp3')
+                                    pygame.mixer.music.play(-1)
+                            else:
+                                pygame.time.set_timer(enemy_timer, random.randint(1, 750))
+
+                        else:
+                            pygame.time.set_timer(enemy_timer, random.randint(ENEMY_APPEAR_SPEED[0] - 20 * max_score,
+                                                                              ENEMY_APPEAR_SPEED[1] - 30 * max_score))
+
+                    if BOSS_IN_GAME and not boss and len(enemy_in_game) == 0:
+                        boss = BossEvent()
+
+                    # Стрельба игрока
+                    for entity in PLAYER_LIST:
+                        entity.shoot()
+
+                    # Атаки босса
+                    if boss:
+                        if 2 * BOSS_HEALTH // 3 < boss.health:
+                            boss.shoot()
+                        elif BOSS_HEALTH // 3 < boss.health < 2 * BOSS_HEALTH // 3:
+                            boss.fire(temp_player_list[0].x + temp_player_list[0].size[0] // 2)
+                        else:
+                            boss.shoot()
+                            boss.fire(temp_player_list[0].x + temp_player_list[0].size[0] // 2)
+
                 # Невидимость курсора
                 pygame.mouse.set_visible(False)
 
