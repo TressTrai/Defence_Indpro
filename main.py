@@ -19,27 +19,39 @@ number_of_player = None
 
 # Параметры всех врагов
 ENEMY_COUNT_DIFFICULTY = 30
-ENEMY_APPEAR_SPEED = (1620, 3000)  # чем меньше числа, тем быстрее появляется враг (1500, 3000)
+ENEMY_APPEAR_SPEED = (1620, 3000)  # чем меньше числа, тем быстрее появляется враг (1620, 3000)
 BOSS_IN_GAME = False
 BOSS_HEALTH = 584
 win = False
 
 # Параметры пуль
-BULLET_SPEED = HEIGHT//160
 AMOUNT_BULLET = 3
 
 # Параметры баффов ([1] - доб. Жизнь [2] - доб. макс Пуль [3] - бесконечные пули на некоторое время)
-BUFF_SIZE = (20, 20)
-BUFF_SPEED = 4
-BUFF_AMOUNT = 5
+AMOUNT_BUFF = 5
 BUFF_CHANCES = [0.40, 0.45, 0.15]
-BUFF_NAMES = ['Heart', 'Bullet', 'Inf']
 
 # Списки объектов
 enemy_in_game = []
 boss_bullets_in_game = []
 buffs_in_game = []
 PLAYER_LIST = []
+
+
+# Класс Звезд-декораций
+class Star(pygame.sprite.Sprite):
+    def __init__(self, x, y):
+        super().__init__()
+        self.x = x
+        self.y = y
+        self.alpha = random.randint(190, 255)
+
+    def flicker(self):
+        self.alpha = random.randint(190, 255)
+        self.draw()
+
+    def draw(self):
+        pygame.draw.circle(screen, (self.alpha, self.alpha, self.alpha), (self.x, self.y), 2)
 
 
 # Класс Пули
@@ -111,14 +123,7 @@ class Button(pygame.sprite.Sprite):
         self.y = y
         self.size = size
 
-        # self.image_passive = pygame.image.load(file_name_passive).convert_alpha()
-        # self.image_passive = pygame.transform.scale(self.image_passive, self.size)
-
         self.image_passive = pygame.transform.scale(button_passive, self.size)
-
-        # self.image_active = pygame.image.load(file_name_active).convert_alpha()
-        # self.image_active = pygame.transform.scale(self.image_active, self.size)
-
         self.image_active = pygame.transform.scale(button_active, self.size)
 
         self.image = self.image_passive
@@ -182,7 +187,7 @@ class BossEvent(pygame.sprite.Sprite):
         if event.type == enemy_timer and not pause:
             random_size = random.randint(WIDTH//40, WIDTH//20)
             bul = Bullet('img/meteorite.png', random.randint(0, WIDTH - random_size), 0, (random_size, random_size),
-                         -1 * BULLET_SPEED)
+                         -1 * HEIGHT // 160)
             boss_bullets_in_game.append(bul)
             pygame.time.set_timer(enemy_timer, random.randint(200, 1000))
 
@@ -378,6 +383,9 @@ def scene_main_menu():
     global plot
     global is_sound_on
     global screen, WIDTH, HEIGHT
+
+    for star in stars:
+        star.flicker()
 
     # Полноэкранный режим
     if is_fullscreen:
@@ -693,7 +701,7 @@ def toggle_fullscreen():
     global is_fullscreen, WIDTH, HEIGHT
     global screen
     global heigth_font_menu, info_font, info_font_underline, boss_font, cut_font, title_font, heigth_font_title
-    global background
+    global background, stars
 
     if is_fullscreen:
         WIDTH, HEIGHT = (1280, 720)
@@ -704,6 +712,15 @@ def toggle_fullscreen():
         screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.FULLSCREEN)
         is_fullscreen = True
 
+    # Список для хранения координат звезд в главном меню
+    stars = []
+
+    # Создание списка звезд
+    for i in range(50):
+        star = Star(random.randint(0, WIDTH), random.randint(0, HEIGHT))
+        stars.append(star)
+
+    # Настройка текста
     heigth_font_menu = HEIGHT // 35
     heigth_font_cs = HEIGHT // 30
     heigth_font_title = HEIGHT // 20
@@ -714,7 +731,7 @@ def toggle_fullscreen():
     boss_font = pygame.font.Font('fonts/New Zelek.ttf', heigth_font_menu)
     title_font = pygame.font.Font('fonts/Researchremix-1nje.otf', heigth_font_title)
 
-    background = pygame.transform.scale(background, (WIDTH, 1800))
+    background = pygame.transform.scale(background, (WIDTH, WIDTH * 2.25))
 
 # -----------------------------
 
@@ -762,9 +779,9 @@ info_font_underline.set_underline(True)
 boss_font = pygame.font.Font('fonts/New Zelek.ttf', heigth_font_menu)
 title_font = pygame.font.Font('fonts/Researchremix-1nje.otf', heigth_font_title)
 
-# Загрузка некоторых изображений (ради оптимизации)
+# Загрузка некоторых изображений (ради оптимизации некоторых моментов)
 background = pygame.image.load('img/background.png').convert()
-background = pygame.transform.scale(background, (WIDTH, 1800))
+background = pygame.transform.scale(background, (WIDTH, WIDTH * 2.25))
 
 button1_image = pygame.image.load('img/button1.png').convert_alpha()
 button2_image = pygame.image.load('img/button2.png').convert_alpha()
@@ -799,10 +816,19 @@ file_record = open('text/high_record.txt', 'r')
 record = int(file_record.readline())
 file_record.close()
 
+# Список для хранения координат звезд в главном меню
+stars = []
+
+# Создание списка звезд
+for i in range(50):
+    star = Star(random.randint(0, WIDTH), random.randint(0, HEIGHT))
+    stars.append(star)
+
 
 # Основной цикл игры
 running = True
 while running:
+    # Вывод фпс игры
     # print(clock.get_fps())
 
     clock.tick(FPS)
@@ -834,12 +860,11 @@ while running:
     elif stage == 4:
         if is_game():
             # Динамичный фон
-            background = pygame.transform.scale(background, (WIDTH, 1800))
             screen.blit(background, (0, background_pos))
-            screen.blit(background, (0, background_pos - 1800))
+            screen.blit(background, (0, background_pos - WIDTH * 2.25))
             if not pause:
                 background_pos += 3
-                if background_pos >= 1800:
+                if background_pos >= WIDTH * 2.25:
                     background_pos = 0
 
             # Создание перемешанного списка ради разрешения конфликтных ситуаций в мультиплеере
@@ -952,11 +977,12 @@ while running:
                     pl.move()
                     pl.draw(screen)
 
-                # Отрисовка и столкновения врагов
+                # Отрисовка, столкновения врагов и генераци Баффов
                 if enemy_in_game:
                     for entity in list(enemy_in_game):
                         entity.move()
-                        if entity.y > HEIGHT or not (0 - entity.size[0] < entity.x < WIDTH):
+
+                        if entity.y > HEIGHT or not (0 - entity.size[0] < entity.x < WIDTH):  # Удаление врага за границы экрана
                             enemy_in_game.remove(entity)
 
                         for pl in temp_player_list:  # Столконовение игрока с врагом
@@ -966,7 +992,7 @@ while running:
                                     pl.lives -= 1
                                     sound_injury_player.play()
 
-                            elif pl.bullets_in_game:  # Столкновение пули игркоа с врагом
+                            elif pl.bullets_in_game:  # Столкновение пули игрока с врагом
                                 for bullet in list(pl.bullets_in_game):
                                     if bullet.rect.colliderect(entity.rect):
                                         if entity in enemy_in_game:
@@ -981,9 +1007,10 @@ while running:
                                         # Спавн Баффов
                                         if not pl.infinite_bullet:
                                             chance_buff = random.random()
-                                            if len(buffs_in_game) < BUFF_AMOUNT:
+                                            if len(buffs_in_game) < AMOUNT_BUFF:
                                                 if chance_buff < 0.1:
-                                                    act = random.choices(BUFF_NAMES, BUFF_CHANCES)[0]
+                                                    buff_names = ['Heart', 'Bullet', 'Inf']
+                                                    act = random.choices(buff_names, BUFF_CHANCES)[0]
                                                     if act == 'Inf':
                                                         kind_buff = 3
                                                     elif act == 'Heart':
