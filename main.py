@@ -550,6 +550,7 @@ def cut_scene(end):
     global running
     global count_cut
 
+    # Фон катсцены
     bg_cut_scene = pygame.transform.scale(cut_scene_image[count_cut-1], (HEIGHT*1.7778, HEIGHT))
     bg_cut_scene_rect = bg_cut_scene.get_rect(center=(WIDTH//2, HEIGHT//2))
     screen.blit(bg_cut_scene, bg_cut_scene_rect)
@@ -1210,8 +1211,6 @@ while running:
             elif btn_main_menu.is_click(event):
                 stage = 0
                 count_cut = 1
-                pygame.mixer.music.load('music/main_menu.mp3')
-                pygame.mixer.music.play(-1)
 
             elif btn_exit.is_click(event):
                 running = False
