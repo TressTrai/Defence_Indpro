@@ -259,6 +259,10 @@ class BossEvent(pygame.sprite.Sprite):
 
     # Отрисовка босса и его сцены
     def draw(self, surf):
+        for entity_bul in self.bullets_in_game:
+            entity_bul.draw(surf)
+        self.laser.draw(surf)
+
         surf.blit(self.image, (self.x, self.y))
         # Отображение коллайдера
         # pygame.draw.rect(surf, 'Red', self.rect, 2)
@@ -789,10 +793,6 @@ def scene_pause():
         pl.draw(screen)
 
     if boss:
-        if boss.bullets_in_game:
-            for entity in boss.bullets_in_game:
-                entity.draw(screen)
-        boss.laser.draw(screen)
         boss.draw(screen)
 
     if enemy_in_game:
