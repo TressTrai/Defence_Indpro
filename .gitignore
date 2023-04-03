@@ -1,9 +1,4 @@
-
-
-.idea/vcs.xml
-.idea/misc.xml
-.idea/Shoot_in_space.iml
-.idea/dictionaries/.xml
+.idea
 build/main/Analysis-00.toc
 build/main/base_library.zip
 build/main/EXE-00.toc
