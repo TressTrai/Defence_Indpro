@@ -13,7 +13,7 @@ NAME_GAME = 'Защита Индпро!'
 
 # Параметры игрока
 TYPE_CONTROL = None
-player_count = None
+player_count = 0
 number_of_player = None
 
 
@@ -33,7 +33,6 @@ BUFF_CHANCES = [0.40, 0.45, 0.15]
 
 # Списки объектов
 enemy_in_game = []
-boss_bullets_in_game = []
 buffs_in_game = []
 PLAYER_LIST = []
 
@@ -56,44 +55,86 @@ class Star(pygame.sprite.Sprite):
 
 # Класс Пули
 class Bullet(pygame.sprite.Sprite):
-    def __init__(self, file_name, x, y, size, speed):
+    def __init__(self, image_name, x, y, size, speed):
         super().__init__()
         self.size = size
         self.speed = speed
-        self.image = pygame.image.load(file_name).convert_alpha()
-        self.image = pygame.transform.scale(self.image, size)
+
+        self.image = pygame.transform.scale(image_name, size)
         rand_angle = random.randint(0, 360)
         self.image = pygame.transform.rotate(self.image, rand_angle)
+
         self.x = x
         self.y = y
         self.rect = pygame.Rect((self.x, self.y), size)
 
     # Движение пули
-    def move(self):
-        self.y -= self.speed
-        self.rect = pygame.Rect((self.x, self.y), self.size)
-        self.draw(screen)
+    def move(self, host):
+        if self.y < -self.size[1] or self.y > HEIGHT + self.size[1]:
+            host.bullets_in_game.remove(self)
+        else:
+            self.y -= self.speed
+            self.rect = pygame.Rect((self.x, self.y), self.size)
+            self.draw(screen)
+
+    def collision(self, host, receiver):
+        if self.speed > 0:
+            if self.rect.colliderect(receiver.rect):
+                if self in host.bullets_in_game:
+                    host.bullets_in_game.remove(self)
+                    if boss:
+                        boss.health -= 5
+                    else:
+                        if receiver in enemy_in_game:
+                            enemy_in_game.remove(receiver)
+                            if receiver.kind == 0:
+                                host.score += 1
+                            else:
+                                host.score += 3
+                            sound_death_enemy.play()
+
+                            # Cпавн баффа
+                            if not host.infinite_bullet:
+                                chance_buff = random.random()
+                                if len(buffs_in_game) < AMOUNT_BUFF:
+                                    if chance_buff < 0.1:
+                                        buff = FallingBuff()
+                                        buffs_in_game.append(buff)
+
+        else:
+            if self.rect.colliderect(receiver.rect) and receiver.lives > 0:
+                if self in host.bullets_in_game:
+                    host.bullets_in_game.remove(self)
+                    receiver.lives -= 1
+                    sound_injury_player.play()
 
     # Отрисовка пули
     def draw(self, surf):
         surf.blit(self.image, (self.x, self.y))
 
 
-# класс Баффов
+# класс Баффов/Бонусов
 class FallingBuff(pygame.sprite.Sprite):
-    def __init__(self, kind):
+    def __init__(self):
         super().__init__()
-        self.kind = kind
+
+        buff_names = ['Heart', 'Bullet', 'Inf']
+        act = random.choices(buff_names, BUFF_CHANCES)[0]
+
+        if act == 'Heart':
+            self.kind = 1
+        elif act == 'Bullet':
+            self.kind = 2
+        else:
+            self.kind = 3
 
         # Выбор спрайта баффа
         if self.kind == 1:
-            self.image = pygame.image.load('img/buff_heart.png').convert_alpha()
+            self.image = buff_heart_image
         elif self.kind == 2:
-            self.image = pygame.image.load('img/buff_bullet.png').convert_alpha()
-        elif self.kind == 3:
-            self.image = pygame.image.load('img/buff_infinity_bullet.png').convert_alpha()
+            self.image = buff_bullet_image
         else:
-            self.image = pygame.image.load('img/button1.png').convert_alpha()
+            self.image = buff_infinity_bullet_image
 
         self.size = WIDTH // 40, WIDTH // 40
         self.image = pygame.transform.scale(self.image, self.size)
@@ -106,8 +147,27 @@ class FallingBuff(pygame.sprite.Sprite):
     def move(self):
         if self.y < HEIGHT + self.size[1]:
             self.y += self.speed
+        else:
+            buffs_in_game.remove(self)
+
         self.rect = pygame.Rect((self.x, self.y), self.size)
         self.draw(screen)
+
+    # Столкновение игрока с баффом
+    def collision(self, pl_entity):
+        if self.rect.colliderect(pl_entity.rect):
+            if self in buffs_in_game:
+                buffs_in_game.remove(self)
+                if self.kind == 1:
+                    pl_entity.lives += 1
+                    sound_buff_heart.play()
+                elif self.kind == 2:
+                    pl_entity.bullet += 1
+                    sound_buff_bullet.play()
+                elif self.kind == 3:
+                    pl_entity.time = pygame.time.get_ticks()
+                    pl_entity.infinite_bullet = True
+                    sound_buff_bullet.play()
 
     # Отрисовка баффа
     def draw(self, surf):
@@ -167,11 +227,11 @@ class BossEvent(pygame.sprite.Sprite):
         self.laser = Laser(temp_player_list[0].x)
 
         self.size = (WIDTH, 250)
-        self.image = pygame.image.load('img/boss.png').convert_alpha()
-        self.image = pygame.transform.scale(self.image, self.size)
+        self.image = pygame.transform.scale(boss_image, self.size)
         self.x = 0
         self.y = -100
         self.max_y = 0
+        self.bullets_in_game = []
         self.rect = pygame.Rect((self.x, self.y), self.size)
 
     # Эпичное появление
@@ -186,9 +246,9 @@ class BossEvent(pygame.sprite.Sprite):
     def shoot(self):
         if event.type == enemy_timer and not pause:
             random_size = random.randint(WIDTH//40, WIDTH//20)
-            bul = Bullet('img/meteorite.png', random.randint(0, WIDTH - random_size), 0, (random_size, random_size),
-                         -1 * HEIGHT // 160)
-            boss_bullets_in_game.append(bul)
+            bullet_speed = -1 * HEIGHT // 160
+            bul = Bullet(meteorite_image, random.randint(0, WIDTH - random_size), 0, (random_size, random_size), bullet_speed)
+            self.bullets_in_game.append(bul)
             pygame.time.set_timer(enemy_timer, random.randint(200, 1000))
 
     # Атака самонаводящимся лазером
@@ -220,8 +280,7 @@ class Laser(pygame.sprite.Sprite):
         self.size = (self.width, self.heigth)
         self.x = player_x
         self.y = 0
-        self.raw_image = pygame.image.load('img/laser.png').convert()
-        self.image = pygame.transform.scale(self.raw_image, self.current_size)
+        self.image = pygame.transform.scale(laser_image, self.current_size)
         self.rect = pygame.Rect((self.x, self.y), self.current_size)
 
     def spread(self):
@@ -232,8 +291,13 @@ class Laser(pygame.sprite.Sprite):
             self.current_heigth += HEIGHT // 40
 
         self.current_size = (self.current_width, self.current_heigth)
-        self.image = pygame.transform.scale(self.raw_image, self.current_size)
+        self.image = pygame.transform.scale(laser_image, self.current_size)
         self.rect = pygame.Rect((self.x, self.y), self.current_size)
+
+    def collision(self, pl_entity):
+        if self.rect.colliderect(pl_entity.rect) and pl_entity.lives > 0:
+            pl_entity.lives -= 1
+            sound_injury_player.play()
 
     def draw(self, surf):
         surf.blit(self.image, (self.x, self.y))
@@ -250,8 +314,7 @@ class Enemy(pygame.sprite.Sprite):
             self.size = (WIDTH // 19, WIDTH // 19)
             self.speed = random.randint(HEIGHT//150, HEIGHT//100)
 
-            self.image = pygame.image.load('img/enemy_basic.png').convert_alpha()
-            self.image = pygame.transform.smoothscale(self.image, self.size)
+            self.image = pygame.transform.scale(enemy_basic_image, self.size)
 
             self.x = random.randint(0, WIDTH - self.size[0])
             self.y = 0 - self.size[0]
@@ -260,8 +323,7 @@ class Enemy(pygame.sprite.Sprite):
             self.speed = random.randint(HEIGHT//150, HEIGHT//120)
             self.speed_x = random.choice([-1, 1]) * random.uniform(3, 10)
 
-            self.image = pygame.image.load('img/enemy_angle.png').convert_alpha()
-            self.image = pygame.transform.smoothscale(self.image, self.size)
+            self.image = pygame.transform.scale(enemy_angle_image, self.size)
 
             # Поворот спрайта если в противоположную сторону направлен
             if self.speed_x > 0:
@@ -282,12 +344,28 @@ class Enemy(pygame.sprite.Sprite):
         if self.kind == 0:
             if self.y < HEIGHT + self.size[1]:
                 self.y += self.speed
+            else:
+                enemy_in_game.remove(self)
         elif self.kind == 1:
             if self.y < HEIGHT + self.size[1] and 0 - self.size[0] < self.x < WIDTH:
                 self.y += self.speed
                 self.x += self.speed_x
+            else:
+                enemy_in_game.remove(self)
         self.rect = pygame.Rect((self.x + 5, self.y + 5), (self.size[0] - 10, self.size[1] - 10))
         self.draw(screen)
+
+    # Коллизия
+    def collision(self, pl_entity):  # Проверка коллизии врагов с игроком
+        if pl_entity.rect.colliderect(self.rect) and pl_entity.lives > 0:
+            if self in enemy_in_game:
+                enemy_in_game.remove(self)
+                pl_entity.lives -= 1
+                sound_injury_player.play()
+
+        elif pl_entity.bullets_in_game:  # Если не было столкновения, то проверяем коллизию пуль игроков
+            for bul_entity in list(pl_entity.bullets_in_game):
+                bul_entity.collision(pl_entity, self)
 
     # Отрисовка врага
     def draw(self, surf):
@@ -298,7 +376,7 @@ class Enemy(pygame.sprite.Sprite):
 
 # Класс Игрока
 class Player(pygame.sprite.Sprite):
-    def __init__(self, file_name, type_control):
+    def __init__(self, type_control):
         pygame.sprite.Sprite.__init__(self)
         self.size = (WIDTH // 13, WIDTH // 13)
         self.speed = WIDTH // 150
@@ -307,15 +385,16 @@ class Player(pygame.sprite.Sprite):
         if number_of_player == 2:
             if player_count == 0:
                 self.x = (WIDTH - self.size[0]) // 4
+                self.image = pygame.transform.scale(player_1_image, self.size)
             else:
                 self.x = 3 * (WIDTH - self.size[0]) // 4
+                self.image = pygame.transform.scale(player_2_image, self.size)
         else:
             self.x = (WIDTH - self.size[0]) // 2
+            self.image = pygame.transform.scale(player_1_image, self.size)
 
         self.y = HEIGHT - self.size[1]
 
-        self.image = pygame.image.load(file_name).convert_alpha()
-        self.image = pygame.transform.scale(self.image, self.size)
         self.rect = pygame.Rect((self.x + 5, self.y + 5), (self.size[0]-10, self.size[1]-10))
         self.kind = type_control
         self.lives = 3
@@ -347,14 +426,21 @@ class Player(pygame.sprite.Sprite):
     # Отрисовка Игрока
     def draw(self, surf):
         if self.lives > 0:
+            for bul_entity in list(self.bullets_in_game):
+                if not pause:
+                    bul_entity.move(self)
+                else:
+                    bul_entity.draw(surf)
+
             surf.blit(self.image, (self.x, self.y))
+
             # отображение коллайдера
             # pygame.draw.rect(surf, 'Red', self.rect, 2)
 
     # Пиу-пяу
     def shoot(self):
 
-        if (len(self.bullets_in_game) < self.bullet or self.infinite_bullet) and self.lives > 0 and not pause:
+        if (len(self.bullets_in_game) < self.bullet or self.infinite_bullet) and self.lives > 0:
             flag = False
 
             if self.kind == 0 and event.type == pygame.MOUSEBUTTONDOWN:
@@ -367,7 +453,7 @@ class Player(pygame.sprite.Sprite):
             if flag:
                 bullet_size = WIDTH // 90, WIDTH // 90
                 bullet_speed = HEIGHT // 120
-                bul = Bullet('img/bullet.png', self.x + self.size[0] // 2 - bullet_size[0] // 2,
+                bul = Bullet(bullet_image, self.x + self.size[0] // 2 - bullet_size[0] // 2,
                              self.y + self.size[1] // 2 - bullet_size[1] // 2, bullet_size, bullet_speed)
                 self.bullets_in_game.append(bul)
                 sound_shoot.play()
@@ -379,7 +465,7 @@ def scene_main_menu():
     global stage
     global number_of_player, player_count, TYPE_CONTROL, PLAYER_LIST
     global boss, BOSS_IN_GAME
-    global enemy_in_game, boss_bullets_in_game, buffs_in_game
+    global enemy_in_game, buffs_in_game
     global plot
     global is_sound_on
     global screen, WIDTH, HEIGHT
@@ -404,7 +490,7 @@ def scene_main_menu():
     btn_volume.draw(screen)
 
     text_caption = title_font.render(NAME_GAME, True, 'White')
-    text_caption_rect = text_caption.get_rect(center=(WIDTH // 2, 300))
+    text_caption_rect = text_caption.get_rect(center=(WIDTH // 2, HEIGHT // 3))
 
     screen.blit(text_caption, text_caption_rect)
 
@@ -437,7 +523,6 @@ def scene_main_menu():
             BOSS_IN_GAME = False
 
             enemy_in_game.clear()
-            boss_bullets_in_game.clear()
             buffs_in_game.clear()
 
         if btn_play_plot.is_click(event):
@@ -534,7 +619,7 @@ def scene_sel_ctrl_type():
             TYPE_CONTROL = 2
 
         if TYPE_CONTROL != -1:
-            player = Player('img/player_' + str(player_count + 1) + '.png', TYPE_CONTROL)
+            player = Player(TYPE_CONTROL)
             PLAYER_LIST.append(player)
             player_count += 1
 
@@ -594,6 +679,102 @@ def cut_scene(end):
                     count_cut += 1
 
 
+def scene_final():
+    global running, pause
+    global stage, count_cut
+    global record
+    global boss, BOSS_IN_GAME
+    global player_count
+
+    if not plot:
+        max_score_player = 0
+        winner = -1
+        for (el, pl) in enumerate(PLAYER_LIST):
+            if pl.score > max_score_player:
+                max_score_player = pl.score
+                if winner == el:
+                    winner = 3
+                    break
+                winner = el
+
+        if max_score_player > record:  # Запись рекорда в файл
+            file_record = open('text/high_record.txt', 'w')
+            record = max_score
+            file_record.write(str(record))
+            file_record.close()
+
+        if len(PLAYER_LIST) == 2:
+            if winner != -1:
+                text_winner = info_font.render('Победитель Игрок ' + str(winner + 1), True, 'White')
+                text_winner_rect = text_winner.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 100))
+                screen.blit(text_winner, text_winner_rect)
+            else:
+                text_winner = info_font.render('Победила Дружба', True, 'White')
+                text_winner_rect = text_winner.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 100))
+                screen.blit(text_winner, text_winner_rect)
+
+        text_record = info_font.render('Рекорд ' + str(record), True, 'White')
+        screen.blit(text_record, (0, 24))
+
+    if win and plot:
+        text_death = info_font.render('Победа', True, 'White')
+    else:
+        text_death = info_font.render('Проигрыш', True, 'White')
+
+    text_death_rect = text_death.get_rect(center=(WIDTH // 2, HEIGHT // 3))
+    screen.blit(text_death, text_death_rect)
+
+    btn_sizes = (WIDTH // 5, HEIGHT // 10)
+    btn_x = (WIDTH - btn_sizes[0]) // 2
+    btn_y = HEIGHT // 2
+    btn_offset_y = btn_sizes[1] + HEIGHT // 40
+
+    btn_retry = Button(button1_image, button2_image, 'Заново', btn_x, btn_y + 0 * btn_offset_y, btn_sizes)
+    btn_retry.update(screen)
+
+    btn_main_menu = Button(button1_image, button2_image, 'Главное меню', btn_x, btn_y + 1 * btn_offset_y, btn_sizes)
+    btn_main_menu.update(screen)
+
+    btn_exit = Button(button1_image, button2_image, 'Выход', btn_x, btn_y + 2 * btn_offset_y, btn_sizes)
+    btn_exit.update(screen)
+
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+
+        if btn_retry.is_click(event):
+            stage = 4
+            record = None
+
+            count_cut = 9
+
+            boss = None
+            BOSS_IN_GAME = False
+
+            enemy_in_game.clear()
+            buffs_in_game.clear()
+
+            pygame.mixer.music.load('music/background.ogg')
+            pygame.mixer.music.play(-1)
+
+            ctrl_player = []
+            player_count = 0
+            for pl in PLAYER_LIST:
+                ctrl_player.append(pl.kind)
+            PLAYER_LIST.clear()
+            for pl in range(len(ctrl_player)):
+                player = Player(ctrl_player[pl])
+                PLAYER_LIST.append(player)
+                player_count += 1
+
+        elif btn_main_menu.is_click(event):
+            stage = 0
+            count_cut = 1
+
+        elif btn_exit.is_click(event):
+            running = False
+
+
 def scene_pause():
     global running, pause
     global stage, count_cut
@@ -605,21 +786,18 @@ def scene_pause():
             entity.draw(screen)
 
     for pl in PLAYER_LIST:
-        if pl.bullets_in_game:
-            for entity in pl.bullets_in_game:
-                entity.draw(screen)
         pl.draw(screen)
 
-    if boss_bullets_in_game:
-        for entity in boss_bullets_in_game:
-            entity.draw(screen)
+    if boss:
+        if boss.bullets_in_game:
+            for entity in boss.bullets_in_game:
+                entity.draw(screen)
+        boss.laser.draw(screen)
+        boss.draw(screen)
 
     if enemy_in_game:
         for entity in enemy_in_game:
             entity.draw(screen)
-    if boss:
-        boss.laser.draw(screen)
-        boss.draw(screen)
 
     pygame.mixer.music.pause()
 
@@ -780,18 +958,36 @@ info_font_underline.set_underline(True)
 boss_font = pygame.font.Font('fonts/New Zelek.ttf', heigth_font_menu)
 title_font = pygame.font.Font('fonts/Researchremix-1nje.otf', heigth_font_title)
 
-# Загрузка некоторых изображений (ради оптимизации некоторых моментов)
+# Загрузка изображений
 background = pygame.image.load('img/background.png').convert()
 background = pygame.transform.scale(background, (WIDTH, WIDTH * 2.25))
 
+boss_image = pygame.image.load('img/boss.png').convert_alpha()
+
+buff_bullet_image = pygame.image.load('img/buff_bullet.png').convert_alpha()
+buff_heart_image = pygame.image.load('img/buff_heart.png').convert_alpha()
+buff_infinity_bullet_image = pygame.image.load('img/buff_infinity_bullet.png').convert_alpha()
+
+bullet_image = pygame.image.load('img/bullet.png').convert_alpha()
+
 button1_image = pygame.image.load('img/button1.png').convert_alpha()
 button2_image = pygame.image.load('img/button2.png').convert_alpha()
+
+enemy_angle_image = pygame.image.load('img/enemy_angle.png').convert_alpha()
+enemy_basic_image = pygame.image.load('img/enemy_basic.png').convert_alpha()
+
+laser_image = pygame.image.load('img/laser.png').convert()
+
+meteorite_image = pygame.image.load('img/meteorite.png').convert_alpha()
 
 fullscreen_off_image = pygame.image.load('img/fullscreen_off.png').convert_alpha()
 fullscreen_on_image = pygame.image.load('img/fullscreen_on.png').convert_alpha()
 
 sound_off_image = pygame.image.load('img/sound_off.png').convert_alpha()
 sound_on_image = pygame.image.load('img/sound_on.png').convert_alpha()
+
+player_1_image = pygame.image.load('img/player_1.png').convert_alpha()
+player_2_image = pygame.image.load('img/player_2.png').convert_alpha()
 
 cut_scene_image = []
 for i in range(12):
@@ -901,7 +1097,7 @@ while running:
                             pause = True
                             break
 
-                    # Спавн врагов (в класс?)
+                    # Спавн врагов
                     if not BOSS_IN_GAME and event.type == enemy_timer and len(enemy_in_game) < ENEMY_COUNT_DIFFICULTY and not pause:
                         kind_enemy = random.randint(0, 1)
                         enemy = Enemy(kind_enemy)
@@ -912,7 +1108,7 @@ while running:
                         for pl in PLAYER_LIST:
                             if pl.score >= max_score:
                                 max_score = pl.score
-                        if ENEMY_APPEAR_SPEED[0] - 20 * max_score <= 0:
+                        if ENEMY_APPEAR_SPEED[0] - 20 * max_score < 0:
                             if plot:
                                 if not BOSS_IN_GAME:
                                     BOSS_IN_GAME = True
@@ -945,116 +1141,58 @@ while running:
                 # Невидимость курсора
                 pygame.mouse.set_visible(False)
 
-                # Отрисовка и столкновения баффов (в класс?)
+                # Отрисовка и столкновения баффов
                 if buffs_in_game:
                     for entity in list(buffs_in_game):
                         entity.move()
 
-                        if entity.y > HEIGHT:
-                            buffs_in_game.remove(entity)
-
                         for pl in temp_player_list:
-                            if pl.rect.colliderect(entity.rect):
-                                if entity in buffs_in_game:
-                                    buffs_in_game.remove(entity)
-                                    if entity.kind == 1:
-                                        pl.lives += 1
-                                        sound_buff_heart.play()
-                                    elif entity.kind == 2:
-                                        pl.bullet += 1
-                                        sound_buff_bullet.play()
-                                    elif entity.kind == 3:
-                                        pl.time = pygame.time.get_ticks()
-                                        pl.infinite_bullet = True
-                                        sound_buff_bullet.play()
+                            entity.collision(pl)
 
                 # Отрисовка игрока
                 for pl in PLAYER_LIST:  # Берется не перемешанный список, чтобы не было мерцания на экране
-                    if pl.bullets_in_game:
-                        for entity in list(pl.bullets_in_game):
-                            entity.move()
-                            if entity.y < 0:
-                                pl.bullets_in_game.remove(entity)
                     pl.move()
                     pl.draw(screen)
 
-                # Отрисовка, столкновения врагов и генераци Баффов
                 if enemy_in_game:
-                    for entity in list(enemy_in_game):
+                    for entity in list(enemy_in_game):  # Движение врага
                         entity.move()
 
-                        if entity.y > HEIGHT or not (0 - entity.size[0] < entity.x < WIDTH):  # Удаление врага за границы экрана
-                            enemy_in_game.remove(entity)
+                        for pl in temp_player_list:  # Столконовение игрока с врагом и спавн
+                            entity.collision(pl)
 
-                        for pl in temp_player_list:  # Столконовение игрока с врагом
-                            if pl.rect.colliderect(entity.rect) and pl.lives > 0:
-                                if entity in enemy_in_game:
-                                    enemy_in_game.remove(entity)
-                                    pl.lives -= 1
-                                    sound_injury_player.play()
-
-                            elif pl.bullets_in_game:  # Столкновение пули игрока с врагом
-                                for bullet in list(pl.bullets_in_game):
-                                    if bullet.rect.colliderect(entity.rect):
-                                        if entity in enemy_in_game:
-                                            enemy_in_game.remove(entity)
-                                            pl.bullets_in_game.remove(bullet)
-                                            if entity.kind == 0:
-                                                pl.score += 1
-                                            else:
-                                                pl.score += 3
-                                            sound_death_enemy.play()
-
-                                        # Спавн Баффов
-                                        if not pl.infinite_bullet:
-                                            chance_buff = random.random()
-                                            if len(buffs_in_game) < AMOUNT_BUFF:
-                                                if chance_buff < 0.1:
-                                                    buff_names = ['Heart', 'Bullet', 'Inf']
-                                                    act = random.choices(buff_names, BUFF_CHANCES)[0]
-                                                    if act == 'Inf':
-                                                        kind_buff = 3
-                                                    elif act == 'Heart':
-                                                        kind_buff = 1
-                                                    elif act == 'Bullet':
-                                                        kind_buff = 2
-
-                                                    if kind_buff != 0:
-                                                        buff = FallingBuff(kind_buff)
-                                                        buffs_in_game.append(buff)
-                                                        kind_buff = 0
-
-                # Отрисовка пуль босса
-                if boss_bullets_in_game:
-                    for entity in list(boss_bullets_in_game):
-                        entity.move()
-                        if entity.y > HEIGHT + entity.size[1]:
-                            boss_bullets_in_game.remove(entity)
-
-                        for pl in temp_player_list:
-                            if entity.rect.colliderect(pl.rect) and pl.lives > 0:
-                                if entity in boss_bullets_in_game:
-                                    boss_bullets_in_game.remove(entity)
-                                    pl.lives -= 1
-                                    sound_injury_player.play()
-
+                # Босс в игре
                 if boss:
+                    # Отрисовка пуль босса
+                    if boss.bullets_in_game:
+                        for entity in list(boss.bullets_in_game):
+                            entity.move(boss)
+
+                            for pl in temp_player_list:
+                                entity.collision(boss, pl)
+
+                    # Появление босса
                     boss.appear()
+
+                    # Лазер босса
                     if boss.health < 2 * BOSS_HEALTH // 3:
                         boss.laser.spread()
                         boss.laser.draw(screen)
+
+                    # Отрисовка босса
                     boss.draw(screen)
+
                     for pl in temp_player_list:
+                        # Стрельба игрока по боссу
                         if pl.bullets_in_game:
                             for entity in list(pl.bullets_in_game):
-                                if entity.rect.colliderect(boss.rect):
-                                    pl.bullets_in_game.remove(entity)
-                                    boss.health -= 5
-                        if boss.health < 2 * BOSS_HEALTH // 3:
-                            if boss.laser.rect.colliderect(pl.rect) and pl.lives > 0:
-                                pl.lives -= 1
-                                sound_injury_player.play()
+                                entity.collision(pl, boss)
 
+                        # Урон по игроку через лазер (переносим в класс)
+                        if boss.health < 2 * BOSS_HEALTH // 3:
+                            boss.laser.collision(pl)
+
+                    # Мертв ли босс?
                     if boss.health <= 0:
                         for pl in temp_player_list:
                             win = True
@@ -1093,14 +1231,11 @@ while running:
                         info_bullet_rect = info_bullet.get_rect(topleft=(0, 2 * heigth_font_menu))
                         info_score_rect = info_score.get_rect(topleft=(0, 3 * heigth_font_menu))
 
-                        # pygame.draw.line(screen, 'White', (0, heigth_font + 5), (100, heigth_font + 5), HEIGHT // 250)
                     else:
                         info_player_rect = info_player.get_rect(topright=(WIDTH, 0 * heigth_font_menu))
                         info_life_rect = info_life.get_rect(topright=(WIDTH, 1 * heigth_font_menu))
                         info_bullet_rect = info_bullet.get_rect(topright=(WIDTH, 2 * heigth_font_menu))
                         info_score_rect = info_score.get_rect(topright=(WIDTH, 3 * heigth_font_menu))
-
-                        # pygame.draw.line(screen, 'White', (WIDTH-100, heigth_font + 5), (WIDTH, heigth_font + 5), HEIGHT // 250)
 
                     screen.blit(info_player, info_player_rect)
                     screen.blit(info_life, info_life_rect)
@@ -1125,95 +1260,7 @@ while running:
 
     # Экран проигрыша/выигрыша
     elif stage == 6:
-        if not plot:
-            max_score = 0
-            winner = -1
-            for (el, pl) in enumerate(PLAYER_LIST):
-                if pl.score > max_score:
-                    max_score = pl.score
-                    if winner == el:
-                        winner = 3
-                        break
-                    winner = el
-
-            if max_score > record:  # Запись рекорда в файл
-                file_record = open('text/high_record.txt', 'w')
-                record = max_score
-                file_record.write(str(record))
-                file_record.close()
-
-            if len(PLAYER_LIST) == 2:
-                if winner != -1:
-                    text_winner = info_font.render('Победитель Игрок ' + str(winner + 1), True, 'White')
-                    text_winner_rect = text_winner.get_rect(center=(WIDTH//2, HEIGHT//2 - 100))
-                    screen.blit(text_winner, text_winner_rect)
-                else:
-                    text_winner = info_font.render('Победила Дружба', True, 'White')
-                    text_winner_rect = text_winner.get_rect(center=(WIDTH//2, HEIGHT//2 - 100))
-                    screen.blit(text_winner, text_winner_rect)
-
-            text_record = info_font.render('Рекорд ' + str(record), True, 'White')
-            screen.blit(text_record, (0, 24))
-
-        if win and plot:
-            text_death = info_font.render('Победа', True, 'White')
-        else:
-            text_death = info_font.render('Проигрыш', True, 'White')
-
-        text_death_rect = text_death.get_rect(center=(WIDTH // 2, HEIGHT // 3))
-        screen.blit(text_death, text_death_rect)
-
-        btn_sizes = (WIDTH // 5, HEIGHT // 10)
-        btn_x = (WIDTH - btn_sizes[0]) // 2
-        btn_y = HEIGHT // 2
-        btn_offset_y = btn_sizes[1] + HEIGHT // 40
-
-        btn_retry = Button(button1_image, button2_image, 'Заново', btn_x, btn_y + 0 * btn_offset_y, btn_sizes)
-        btn_retry.update(screen)
-
-        btn_main_menu = Button(button1_image, button2_image, 'Главное меню', btn_x, btn_y + 1 * btn_offset_y, btn_sizes)
-        btn_main_menu.update(screen)
-
-        btn_exit = Button(button1_image, button2_image, 'Выход', btn_x, btn_y + 2 * btn_offset_y, btn_sizes)
-        btn_exit.update(screen)
-
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                running = False
-
-            if btn_retry.is_click(event):
-                stage = 4
-                record = None
-
-                count_cut = 9
-
-                if boss:
-                    boss = None
-                BOSS_IN_GAME = False
-
-                enemy_in_game.clear()
-                boss_bullets_in_game.clear()
-                buffs_in_game.clear()
-
-                pygame.mixer.music.load('music/background.ogg')
-                pygame.mixer.music.play(-1)
-
-                ctrl_player = []
-                player_count = 0
-                for pl in PLAYER_LIST:
-                    ctrl_player.append(pl.kind)
-                PLAYER_LIST.clear()
-                for pl in range(len(ctrl_player)):
-                    player = Player('img/player_'+str(pl+1)+'.png', ctrl_player[pl])
-                    PLAYER_LIST.append(player)
-                    player_count += 1
-
-            elif btn_main_menu.is_click(event):
-                stage = 0
-                count_cut = 1
-
-            elif btn_exit.is_click(event):
-                running = False
+        scene_final()
 
     pygame.display.update()
 
