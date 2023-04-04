@@ -309,14 +309,15 @@ class Laser(pygame.sprite.Sprite):
 
 # Класс Врагов
 class Enemy(pygame.sprite.Sprite):
-    def __init__(self, kind):
+    def __init__(self):
         super().__init__()
 
-        self.kind = kind
+        self.kind = random.randint(0, 1)
 
         if self.kind == 0:  # Базовый враг
             self.size = (WIDTH // 19, WIDTH // 19)
             self.speed = random.randint(HEIGHT//150, HEIGHT//100)
+            self.speed_x = 0
 
             self.image = pygame.transform.scale(enemy_basic_image, self.size)
 
@@ -345,17 +346,11 @@ class Enemy(pygame.sprite.Sprite):
 
     # Движение врага
     def move(self):
-        if self.kind == 0:
-            if self.y < HEIGHT + self.size[1]:
-                self.y += self.speed
-            else:
-                enemy_in_game.remove(self)
-        elif self.kind == 1:
-            if self.y < HEIGHT + self.size[1] and 0 - self.size[0] < self.x < WIDTH:
-                self.y += self.speed
-                self.x += self.speed_x
-            else:
-                enemy_in_game.remove(self)
+        if self.y < HEIGHT + self.size[1] and 0 - self.size[0] < self.x < WIDTH:
+            self.y += self.speed
+            self.x += self.speed_x
+        else:
+            enemy_in_game.remove(self)
         self.rect = pygame.Rect((self.x + 5, self.y + 5), (self.size[0] - 10, self.size[1] - 10))
         self.draw(screen)
 
@@ -785,9 +780,8 @@ def scene_pause():
     global WIDTH, HEIGHT, screen
 
     # Все возможные отрисовки
-    if buffs_in_game:
-        for entity in buffs_in_game:
-            entity.draw(screen)
+    for entity in buffs_in_game:
+        entity.draw(screen)
 
     for pl in PLAYER_LIST:
         pl.draw(screen)
@@ -795,9 +789,8 @@ def scene_pause():
     if boss:
         boss.draw(screen)
 
-    if enemy_in_game:
-        for entity in enemy_in_game:
-            entity.draw(screen)
+    for entity in enemy_in_game:
+        entity.draw(screen)
 
     pygame.mixer.music.pause()
 
@@ -1099,11 +1092,9 @@ while running:
 
                     # Спавн врагов
                     if not BOSS_IN_GAME and event.type == enemy_timer and len(enemy_in_game) < ENEMY_COUNT_DIFFICULTY and not pause:
-                        kind_enemy = random.randint(0, 1)
-                        enemy = Enemy(kind_enemy)
-                        enemy_in_game.append(enemy)
+                        enemy_in_game.append(Enemy())
 
-                        # Спавн врагов в зависимости от максимального количества очков
+                        # Установка таймера врагов в зависимости от максимального количества очковвввв
                         max_score = 0
                         for pl in PLAYER_LIST:
                             if pl.score >= max_score:
@@ -1142,34 +1133,31 @@ while running:
                 pygame.mouse.set_visible(False)
 
                 # Отрисовка и столкновения баффов
-                if buffs_in_game:
-                    for entity in list(buffs_in_game):
-                        entity.move()
+                for entity in list(buffs_in_game):
+                    entity.move()
 
-                        for pl in temp_player_list:
-                            entity.collision(pl)
+                    for pl in temp_player_list:
+                        entity.collision(pl)
 
                 # Отрисовка игрока
                 for pl in PLAYER_LIST:  # Берется не перемешанный список, чтобы не было мерцания на экране
                     pl.move()
                     pl.draw(screen)
 
-                if enemy_in_game:
-                    for entity in list(enemy_in_game):  # Движение врага
-                        entity.move()
+                for entity in list(enemy_in_game):  # Движение врага
+                    entity.move()
 
-                        for pl in temp_player_list:  # Столконовение игрока с врагом и спавн
-                            entity.collision(pl)
+                    for pl in temp_player_list:  # Столконовение игрока с врагом и спавн
+                        entity.collision(pl)
 
                 # Босс в игре
                 if boss:
                     # Отрисовка пуль босса
-                    if boss.bullets_in_game:
-                        for entity in list(boss.bullets_in_game):
-                            entity.move(boss)
+                    for entity in list(boss.bullets_in_game):
+                        entity.move(boss)
 
-                            for pl in temp_player_list:
-                                entity.collision(boss, pl)
+                        for pl in temp_player_list:
+                            entity.collision(boss, pl)
 
                     # Появление босса
                     boss.appear()
@@ -1184,9 +1172,8 @@ while running:
 
                     for pl in temp_player_list:
                         # Стрельба игрока по боссу
-                        if pl.bullets_in_game:
-                            for entity in list(pl.bullets_in_game):
-                                entity.collision(pl, boss)
+                        for entity in list(pl.bullets_in_game):
+                            entity.collision(pl, boss)
 
                         # Урон по игроку через лазер (переносим в класс)
                         if boss.health < 2 * BOSS_HEALTH // 3:
@@ -1242,6 +1229,7 @@ while running:
                     screen.blit(info_bullet, info_bullet_rect)
                     screen.blit(info_score, info_score_rect)
 
+            print(len(enemy_in_game))
         # Переключение сцены
         else:
             stage += 1
