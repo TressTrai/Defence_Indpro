@@ -114,6 +114,9 @@ class Bullet(pygame.sprite.Sprite):
     def draw(self, surf):
         surf.blit(self.image, (self.x, self.y))
 
+        # отображение коллайдера
+        # pygame.draw.rect(surf, 'Red', self.rect, 2)
+
 
 # класс Баффов/Бонусов
 class FallingBuff(pygame.sprite.Sprite):
@@ -1100,7 +1103,7 @@ while running:
                             break
 
                     # Спавн врагов
-                    if not BOSS_IN_GAME and event.type == enemy_timer and len(enemy_in_game) < ENEMY_COUNT_DIFFICULTY and not pause:
+                    if not BOSS_IN_GAME and event.type == enemy_timer and len(enemy_in_game) < ENEMY_COUNT_DIFFICULTY:
                         enemy_in_game.append(Enemy())
 
                         # Установка таймера врагов в зависимости от максимального количества очков
